@@ -60,11 +60,19 @@ func (s *ProductService) AddProduct(product *dao.Product, image *dao.Image) erro
 }
 
 func (s *ProductService) AddProductImage(productID uuid.UUID, image []byte) error {
-
+	imageID, err := s.imageService.AddImage(image)
+	if err != nil {
+		return err
+	}
+	return s.productRepo.UpdateImage(productID, imageID)
 }
 
 func (s *ProductService) GetProductImage(productID uuid.UUID) ([]byte, error) {
-
+	product, err := s.productRepo.GetByID(productID)
+	if err != nil {
+		return nil, ErrProductNotFound
+	}
+	return s.imageService.GetImage(product.ImageID)
 }
 
 func (s *ProductService) GetProduct(id uuid.UUID) (*dao.Product, error) {
@@ -80,5 +88,11 @@ func (s *ProductService) RemoveProduct(productID uuid.UUID) error {
 }
 
 func (s *ProductService) GetAllProducts(limit, offset int) ([]*dao.Product, error) {
+	if limit < 1 || limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
 	return s.productRepo.GetAll(limit, offset)
 }

@@ -12,12 +12,13 @@ type ClientRepository interface {
 	GetByID(id uuid.UUID) (*dao.Client, error)
 	GetByName(name, surname string) (*dao.Client, error)
 	GetAll(limit, offset int) ([]*dao.Client, error)
-	UpdateAddress(clientID uuid.UUID, newAddress *dao.Address) error
+	UpdateAddress(clientID, addressID uuid.UUID) error
 }
 
 type AddressRepository interface {
 	Save(address *dao.Address) (uuid.UUID, error)
 	Find(address *dao.Address) (uuid.UUID, error)
+	GetByID(id uuid.UUID) (*dao.Address, error)
 }
 
 type ImageRepository interface {
@@ -32,12 +33,13 @@ type SupplierRepository interface {
 	RemoveByID(id uuid.UUID) error
 	GetByID(id uuid.UUID) (*dao.Supplier, error)
 	GetAll(limit, offset int) ([]*dao.Supplier, error)
-	UpdateAddress(supplierID uuid.UUID, newAddress *dao.Address) error
+	UpdateAddress(supplierID, addressID uuid.UUID) error
 }
 
 type ProductRepository interface {
 	Save(product *dao.Product) error
 	UpdateAvailableStock(id uuid.UUID, value int) error
+	UpdateImage(productID, imageID uuid.UUID) error
 	GetByID(id uuid.UUID) (*dao.Product, error)
 	GetAll(limit, offset int) ([]*dao.Product, error)
 	RemoveByID(id uuid.UUID) error

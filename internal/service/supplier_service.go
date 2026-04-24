@@ -51,9 +51,19 @@ func (s *SupplierService) RemoveSupplier(supplierID uuid.UUID) error {
 }
 
 func (s *SupplierService) GetAllSuppliers(limit, offset int) ([]*dao.Supplier, error) {
+	if limit < 1 || limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
 	return s.supplierRepo.GetAll(limit, offset)
 }
 
 func (s *SupplierService) ChangeSupplierAddress(supplierID uuid.UUID, newAddress *dao.Address) error {
-	return s.supplierRepo.UpdateAddress(supplierID, newAddress)
+	addressID, err := s.addressService.MustGetAddressID(newAddress)
+	if err != nil {
+		return err
+	}
+	return s.supplierRepo.UpdateAddress(supplierID, addressID)
 }

@@ -61,9 +61,19 @@ func (s *ClientService) GetClientByName(name, surname string) (*dao.Client, erro
 }
 
 func (s *ClientService) GetAllClients(limit, offset int) ([]*dao.Client, error) {
+	if limit < 1 || limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
 	return s.clientRepo.GetAll(limit, offset)
 }
 
 func (s *ClientService) ChangeClientAddress(clientID uuid.UUID, newAddress *dao.Address) error {
-	return s.clientRepo.UpdateAddress(clientID, newAddress)
+	addressID, err := s.addressService.MustGetAddressID(newAddress)
+	if err != nil {
+		return err
+	}
+	return s.clientRepo.UpdateAddress(clientID, addressID)
 }

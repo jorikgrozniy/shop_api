@@ -29,6 +29,10 @@ func (s *AddressService) MustGetAddressID(address *dao.Address) (uuid.UUID, erro
 	}
 }
 
+func (s *AddressService) GetAddress(id uuid.UUID) (*dao.Address, error) {
+	return s.addressRepo.GetByID(id)
+}
+
 func (s *AddressService) addAddress(address *dao.Address) (uuid.UUID, error) {
 	if len(address.Country) == 0 || len(address.Country) > 100 {
 		return uuid.Nil, ErrInvalidCountryLength

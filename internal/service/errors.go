@@ -25,4 +25,5 @@ var (
 	ErrInvalidPrice          = errors.New("price must not be negative")
 	ErrInvalidAvailableStock = errors.New("available stock must be positive")
 	ErrSupplierNotFound      = errors.New("supplier with given id not found")
+	ErrProductNotFound       = errors.New("product not found")
 )
