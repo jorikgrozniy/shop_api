@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	"shop_api/internal/dao"
+	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"shop_api/pkg/postgres"
 
@@ -19,9 +19,9 @@ func NewSupplierRepoPostgres(pg *postgres.Postgres) repository.SupplierRepositor
 	}
 }
 
-func (r *supplierRepoPostgres) Save(supplier *dao.Supplier) error {
+func (r *supplierRepoPostgres) Save(supplier *entity.Supplier) error {
 	if supplier == nil {
-		return ErrNilEntity
+		return repository.ErrNilEntity
 	}
 
 	query := `
@@ -37,7 +37,7 @@ func (r *supplierRepoPostgres) Save(supplier *dao.Supplier) error {
 	)
 
 	if err != nil {
-		return ErrQueryExec
+		return repository.ErrQueryExec
 	}
 
 	return nil
@@ -49,17 +49,23 @@ func (r *supplierRepoPostgres) RemoveByID(id uuid.UUID) error {
 		WHERE id = $1
 	`
 
-	_, err := r.pg.Pool.Exec(context.Background(), query, id)
+	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, id)
 
-	if err != nil {
-		return ErrQueryExec
+	if isFKViolation(err) {
+		return repository.ErrDependentEntity
+	} else if err != nil {
+		return repository.ErrQueryExec
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return repository.ErrNoRows
 	}
 
 	return nil
 }
 
-func (r *supplierRepoPostgres) GetByID(id uuid.UUID) (*dao.Supplier, error) {
-	var supplier dao.Supplier
+func (r *supplierRepoPostgres) GetByID(id uuid.UUID) (*entity.Supplier, error) {
+	var supplier entity.Supplier
 	query := `
 		SELECT
 			id, name, address_id, phone_number
@@ -71,14 +77,16 @@ func (r *supplierRepoPostgres) GetByID(id uuid.UUID) (*dao.Supplier, error) {
 		&supplier.ID, &supplier.Name, &supplier.AddressID, &supplier.PhoneNumber,
 	)
 
-	if err != nil {
-		return nil, ErrQueryExec
+	if err == postgres.ErrNoRows {
+		return nil, repository.ErrNoRows
+	} else if err != nil {
+		return nil, repository.ErrQueryExec
 	}
 
 	return &supplier, nil
 }
 
-func (r *supplierRepoPostgres) GetAll(limit, offset int) ([]*dao.Supplier, error) {
+func (r *supplierRepoPostgres) GetWithParams(limit, offset int) ([]*entity.Supplier, error) {
 	query := `
 		SELECT
 			id, name, address_id, phone_number
@@ -89,19 +97,19 @@ func (r *supplierRepoPostgres) GetAll(limit, offset int) ([]*dao.Supplier, error
 
 	rows, err := r.pg.Pool.Query(context.Background(), query, limit, offset)
 	if err != nil {
-		return nil, ErrQueryExec
+		return nil, repository.ErrQueryExec
 	}
 	defer rows.Close()
 
-	var suppliers []*dao.Supplier
+	var suppliers []*entity.Supplier
 	for rows.Next() {
-		var supplier dao.Supplier
+		var supplier entity.Supplier
 		err := rows.Scan(
 			&supplier.ID, &supplier.Name,
 			&supplier.AddressID, &supplier.PhoneNumber,
 		)
 		if err != nil {
-			return nil, ErrRowScan
+			return nil, repository.ErrRowScan
 		}
 		suppliers = append(suppliers, &supplier)
 	}
@@ -116,10 +124,14 @@ func (r *supplierRepoPostgres) UpdateAddress(supplierID, addressID uuid.UUID) er
 		WHERE id = $1
 	`
 
-	_, err := r.pg.Pool.Exec(context.Background(), query, supplierID, addressID)
+	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, supplierID, addressID)
 
 	if err != nil {
-		return ErrQueryExec
+		return repository.ErrQueryExec
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return repository.ErrNoRows
 	}
 
 	return nil

@@ -1,7 +1,7 @@
 package service
 
 import (
-	"shop_api/internal/dao"
+	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
 	"github.com/google/uuid"
@@ -17,7 +17,7 @@ func NewAddressService(addressRepo repository.AddressRepository) *AddressService
 	}
 }
 
-func (s *AddressService) MustGetAddressID(address *dao.Address) (uuid.UUID, error) {
+func (s *AddressService) MustGetAddressID(address *entity.Address) (uuid.UUID, error) {
 	if id, found := s.findAddress(address); found {
 		return id, nil
 	}
@@ -29,11 +29,19 @@ func (s *AddressService) MustGetAddressID(address *dao.Address) (uuid.UUID, erro
 	}
 }
 
-func (s *AddressService) GetAddress(id uuid.UUID) (*dao.Address, error) {
-	return s.addressRepo.GetByID(id)
+func (s *AddressService) GetAddress(id uuid.UUID) (*entity.Address, error) {
+	address, err := s.addressRepo.GetByID(id)
+
+	if err == repository.ErrNoRows {
+		return nil, ErrAddressNotFound
+	} else if err != nil {
+		return nil, ErrServerInternal
+	}
+
+	return address, nil
 }
 
-func (s *AddressService) addAddress(address *dao.Address) (uuid.UUID, error) {
+func (s *AddressService) addAddress(address *entity.Address) (uuid.UUID, error) {
 	if len(address.Country) == 0 || len(address.Country) > 100 {
 		return uuid.Nil, ErrInvalidCountryLength
 	}
@@ -54,7 +62,7 @@ func (s *AddressService) addAddress(address *dao.Address) (uuid.UUID, error) {
 	return id, nil
 }
 
-func (s *AddressService) findAddress(address *dao.Address) (uuid.UUID, bool) {
+func (s *AddressService) findAddress(address *entity.Address) (uuid.UUID, bool) {
 	if id, err := s.addressRepo.Find(address); err != nil {
 		return uuid.Nil, false
 	} else {

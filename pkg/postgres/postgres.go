@@ -3,17 +3,23 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log"
+	"shop_api/config"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/fx"
 )
+
+var ErrNoRows = pgx.ErrNoRows
 
 type Postgres struct {
 	Pool *pgxpool.Pool
 }
 
-func New(dbURL string) (*Postgres, error) {
-	dbpool, err := pgxpool.New(context.Background(), dbURL)
+func NewPostgres(lc fx.Lifecycle, cfg *config.DatabaseConfig) (*Postgres, error) {
+	dbpool, err := pgxpool.New(context.Background(), cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create connection pool: %w", err)
 	}
@@ -25,12 +31,28 @@ func New(dbURL string) (*Postgres, error) {
 		return nil, fmt.Errorf("database does not respond: %w", err)
 	}
 
-	return &Postgres{
+	db := &Postgres{
 		Pool: dbpool,
-	}, nil
+	}
+
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			log.Println("Closing database connection")
+
+			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+
+			db.close()
+
+			log.Println("Database connection closed")
+			return nil
+		},
+	})
+
+	return db, nil
 }
 
-func (p *Postgres) Close() {
+func (p *Postgres) close() {
 	if p.Pool != nil {
 		p.Pool.Close()
 	}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
 	"github.com/google/uuid"
@@ -16,7 +17,7 @@ func NewImageService(imageRepo repository.ImageRepository) *ImageService {
 	}
 }
 
-func (s *ImageService) AddImage(image []byte) (uuid.UUID, error) {
+func (s *ImageService) AddImage(image *entity.Image) (uuid.UUID, error) {
 	id, err := s.imageRepo.Save(image)
 	if err != nil {
 		return uuid.Nil, ErrServerInternal
@@ -26,13 +27,40 @@ func (s *ImageService) AddImage(image []byte) (uuid.UUID, error) {
 }
 
 func (s *ImageService) ChangeImage(id uuid.UUID, newImage []byte) error {
-	return s.imageRepo.Update(id, newImage)
+	if err := s.imageRepo.Update(id, newImage); err == repository.ErrNoRows {
+		return ErrImageNotFound
+	} else if err != nil {
+		return ErrServerInternal
+	}
+
+	return nil
 }
 
 func (s *ImageService) RemoveImage(id uuid.UUID) error {
-	return s.imageRepo.RemoveByID(id)
+	err := s.imageRepo.RemoveByID(id)
+
+	switch err {
+	case repository.ErrNoRows:
+		return ErrImageNotFound
+	case repository.ErrDependentEntity:
+		return ErrDependentEntity
+	}
+
+	if err != nil {
+		return ErrServerInternal
+	}
+
+	return nil
 }
 
-func (s *ImageService) GetImage(id uuid.UUID) ([]byte, error) {
-	return s.imageRepo.GetByID(id)
+func (s *ImageService) GetImage(id uuid.UUID) (*entity.Image, error) {
+	image, err := s.imageRepo.GetByID(id)
+
+	if err == repository.ErrNoRows {
+		return nil, ErrImageNotFound
+	} else if err != nil {
+		return nil, ErrServerInternal
+	}
+
+	return image, nil
 }

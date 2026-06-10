@@ -1,11 +1,11 @@
 package mapper
 
 import (
-	"shop_api/internal/dao"
-	"shop_api/internal/dto"
+	"shop_api/internal/controller/restapi/v1/dto"
+	"shop_api/internal/entity"
 )
 
-func AddressDAOtoDTO(address *dao.Address) dto.AddressResponse {
+func AddressDAOtoDTO(address *entity.Address) dto.AddressResponse {
 	return dto.AddressResponse{
 		ID:      address.ID.String(),
 		Country: address.Country,
@@ -14,25 +14,24 @@ func AddressDAOtoDTO(address *dao.Address) dto.AddressResponse {
 	}
 }
 
-func ImageDAOtoDTO(image *dao.Image) dto.ImageResponse {
-	return dto.ImageResponse{
-		ID:    image.ID.String(),
-		Image: string(image.Image),
+func ImageDAOtoDTO(image *entity.Image) dto.ImageRequest {
+	return dto.ImageRequest{
+		JPGbase64: string(image.Image),
 	}
 }
 
-func ClientDAOtoDTO(client *dao.Client) dto.ClientResponse {
+func ClientDAOtoDTO(client *entity.Client) dto.ClientResponse {
 	return dto.ClientResponse{
 		ID:               client.ID.String(),
 		Name:             client.Name,
 		Surname:          client.Surname,
-		Birthdate:        client.Birthdate.String(),
+		Birthdate:        client.Birthdate.Format("2006-01-02"),
 		Gender:           client.Gender,
-		RegistrationDate: client.RegistrationDate.String(),
+		RegistrationDate: client.RegistrationDate.Format("2006-01-02"),
 	}
 }
 
-func ClientListDAOtoDTO(clients []*dao.Client) dto.ClientListResponse {
+func ClientListDAOtoDTO(clients []*entity.Client) dto.ClientListResponse {
 	arrLen := len(clients)
 	dtoClients := make([]dto.ClientResponse, arrLen)
 
@@ -46,7 +45,7 @@ func ClientListDAOtoDTO(clients []*dao.Client) dto.ClientListResponse {
 	}
 }
 
-func SupplierDAOtoDTO(supplier *dao.Supplier) dto.SupplierResponse {
+func SupplierDAOtoDTO(supplier *entity.Supplier) dto.SupplierResponse {
 	return dto.SupplierResponse{
 		ID:          supplier.ID.String(),
 		Name:        supplier.Name,
@@ -54,7 +53,7 @@ func SupplierDAOtoDTO(supplier *dao.Supplier) dto.SupplierResponse {
 	}
 }
 
-func SupplierListDAOtoDTO(suppliers []*dao.Supplier) dto.SupplierListResponse {
+func SupplierListDAOtoDTO(suppliers []*entity.Supplier) dto.SupplierListResponse {
 	arrLen := len(suppliers)
 	dtoSuppliers := make([]dto.SupplierResponse, arrLen)
 
@@ -68,7 +67,17 @@ func SupplierListDAOtoDTO(suppliers []*dao.Supplier) dto.SupplierListResponse {
 	}
 }
 
-func ProductDAOtoDTO(product *dao.Product) dto.ProductResponse {
+func ProductDAOtoDTO(product *entity.Product) dto.ProductResponse {
+	imageID := ""
+	if product.ImageID != nil {
+		imageID = product.ImageID.String()
+	}
+
+	supplierID := ""
+	if product.SupplierID != nil {
+		supplierID = product.SupplierID.String()
+	}
+
 	return dto.ProductResponse{
 		ID:             product.ID.String(),
 		Name:           product.Name,
@@ -76,11 +85,12 @@ func ProductDAOtoDTO(product *dao.Product) dto.ProductResponse {
 		Price:          product.Price,
 		AvailableStock: product.AvailableStock,
 		LastUpdate:     product.LastUpdate.String(),
-		SupplierID:     product.SupplierID.String(),
+		SupplierID:     supplierID,
+		ImageID:        imageID,
 	}
 }
 
-func ProductListDAOtoDTO(products []*dao.Product) dto.ProductListResponse {
+func ProductListDAOtoDTO(products []*entity.Product) dto.ProductListResponse {
 	arrLen := len(products)
 	dtoProducts := make([]dto.ProductResponse, arrLen)
 

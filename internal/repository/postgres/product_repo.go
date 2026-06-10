@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	"shop_api/internal/dao"
+	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"shop_api/pkg/postgres"
 
@@ -19,9 +19,9 @@ func NewProductRepoPostgres(pg *postgres.Postgres) repository.ProductRepository 
 	}
 }
 
-func (r *productRepoPostgres) Save(product *dao.Product) error {
+func (r *productRepoPostgres) Save(product *entity.Product) error {
 	if product == nil {
-		return ErrNilEntity
+		return repository.ErrNilEntity
 	}
 
 	query := `
@@ -39,7 +39,7 @@ func (r *productRepoPostgres) Save(product *dao.Product) error {
 	)
 
 	if err != nil {
-		return ErrQueryExec
+		return repository.ErrQueryExec
 	}
 
 	return nil
@@ -52,10 +52,14 @@ func (r *productRepoPostgres) UpdateAvailableStock(id uuid.UUID, value int) erro
 		WHERE id = $1
 	`
 
-	_, err := r.pg.Pool.Exec(context.Background(), query, id, value)
+	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, id, value)
 
 	if err != nil {
-		return ErrQueryExec
+		return repository.ErrQueryExec
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return repository.ErrNoRows
 	}
 
 	return nil
@@ -68,17 +72,21 @@ func (r *productRepoPostgres) UpdateImage(productID, imageID uuid.UUID) error {
 		WHERE id = $1
 	`
 
-	_, err := r.pg.Pool.Exec(context.Background(), query, productID, imageID)
+	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, productID, imageID)
 
 	if err != nil {
-		return ErrQueryExec
+		return repository.ErrQueryExec
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return repository.ErrNoRows
 	}
 
 	return nil
 }
 
-func (r *productRepoPostgres) GetByID(id uuid.UUID) (*dao.Product, error) {
-	var product dao.Product
+func (r *productRepoPostgres) GetByID(id uuid.UUID) (*entity.Product, error) {
+	var product entity.Product
 	query := `
 		SELECT
 			id, name, category, price, available_stock,
@@ -92,14 +100,16 @@ func (r *productRepoPostgres) GetByID(id uuid.UUID) (*dao.Product, error) {
 		&product.LastUpdate, &product.SupplierID, &product.ImageID,
 	)
 
-	if err != nil {
-		return nil, ErrQueryExec
+	if err == postgres.ErrNoRows {
+		return nil, repository.ErrNoRows
+	} else if err != nil {
+		return nil, repository.ErrQueryExec
 	}
 
 	return &product, nil
 }
 
-func (r *productRepoPostgres) GetAll(limit, offset int) ([]*dao.Product, error) {
+func (r *productRepoPostgres) GetWithParams(limit, offset int) ([]*entity.Product, error) {
 	query := `
 		SELECT
 			id, name, category, price, available_stock,
@@ -111,19 +121,19 @@ func (r *productRepoPostgres) GetAll(limit, offset int) ([]*dao.Product, error) 
 
 	rows, err := r.pg.Pool.Query(context.Background(), query, limit, offset)
 	if err != nil {
-		return nil, ErrQueryExec
+		return nil, repository.ErrQueryExec
 	}
 	defer rows.Close()
 
-	var products []*dao.Product
+	var products []*entity.Product
 	for rows.Next() {
-		var product dao.Product
+		var product entity.Product
 		err := rows.Scan(
 			&product.ID, &product.Name, &product.Category, &product.Price, &product.AvailableStock,
 			&product.LastUpdate, &product.SupplierID, &product.ImageID,
 		)
 		if err != nil {
-			return nil, ErrRowScan
+			return nil, repository.ErrRowScan
 		}
 		products = append(products, &product)
 	}
@@ -137,10 +147,16 @@ func (r *productRepoPostgres) RemoveByID(id uuid.UUID) error {
 		WHERE id = $1
 	`
 
-	_, err := r.pg.Pool.Exec(context.Background(), query, id)
+	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, id)
 
-	if err != nil {
-		return ErrQueryExec
+	if isFKViolation(err) {
+		return repository.ErrDependentEntity
+	} else if err != nil {
+		return repository.ErrQueryExec
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return repository.ErrNoRows
 	}
 
 	return nil

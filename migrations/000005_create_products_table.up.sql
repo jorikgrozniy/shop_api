@@ -5,12 +5,14 @@ CREATE TABLE products (
     price DECIMAL(10, 2) NOT NULL CHECK (price >= 0),
     available_stock INT NOT NULL CHECK (available_stock >= 0),
     last_update_date DATE DEFAULT CURRENT_DATE,
-    supplier_id UUID NOT NULL,
+    supplier_id UUID,
     image_id UUID,
 
     CONSTRAINT fk_product_supplier 
-        FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+        ON DELETE SET NULL,
     
     CONSTRAINT fk_product_image 
         FOREIGN KEY (image_id) REFERENCES images(id)
+        ON DELETE SET NULL
 );

@@ -1,0 +1,888 @@
+basePath: /api/v1
+definitions:
+  dto.AddressRequest:
+    properties:
+      city:
+        example: Moscow
+        type: string
+      country:
+        example: Russia
+        type: string
+      street:
+        example: Vernadskogo
+        type: string
+    required:
+    - city
+    - country
+    - street
+    type: object
+  dto.AddressResponse:
+    properties:
+      address_id:
+        example: b1c4b160-b9e9-4f0c-83ec-9119e1f467f9
+        type: string
+      city:
+        example: Moscow
+        type: string
+      country:
+        example: Russia
+        type: string
+      street:
+        example: Vernadskogo
+        type: string
+    type: object
+  dto.ClientListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.ClientResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      total:
+        example: 5
+        type: integer
+    type: object
+  dto.ClientRequest:
+    properties:
+      address:
+        $ref: '#/definitions/dto.AddressRequest'
+      birthdate:
+        example: "2006-11-25"
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        example: male
+        type: string
+      name:
+        example: Egor
+        type: string
+      surname:
+        example: Egorov
+        type: string
+    required:
+    - address
+    - birthdate
+    - gender
+    - name
+    - surname
+    type: object
+  dto.ClientResponse:
+    properties:
+      address:
+        $ref: '#/definitions/dto.AddressResponse'
+      birthdate:
+        example: "2006-11-25"
+        type: string
+      client_id:
+        example: b1c4b160-b9e9-4f0c-83ec-9119e1f467f9
+        type: string
+      country:
+        example: male
+        type: string
+      name:
+        example: Egor
+        type: string
+      registration_date:
+        example: "2026-06-01"
+        type: string
+      surname:
+        example: Egorov
+        type: string
+    type: object
+  dto.ErrorResponse:
+    properties:
+      error:
+        example: internal server error
+        type: string
+    type: object
+  dto.ImageRequest:
+    properties:
+      jpg_base64:
+        example: iVBORw0KGgoAAAANSUhEUgAAB4AA...
+        type: string
+    required:
+    - jpg_base64
+    type: object
+  dto.ProductListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.ProductResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      total:
+        example: 5
+        type: integer
+    type: object
+  dto.ProductRequest:
+    properties:
+      available_stock:
+        example: 30
+        minimum: 1
+        type: integer
+      category:
+        example: Electronics
+        type: string
+      image:
+        $ref: '#/definitions/dto.ImageRequest'
+      name:
+        example: Keyboard
+        type: string
+      price:
+        example: 289.9
+        minimum: 0
+        type: number
+      supplier_id:
+        example: b1c4b160-b9e9-4f0c-83ec-9119e1f467f9
+        type: string
+    required:
+    - available_stock
+    - category
+    - name
+    - price
+    - supplier_id
+    type: object
+  dto.ProductResponse:
+    properties:
+      available_stock:
+        example: 30
+        type: integer
+      category:
+        example: Electronics
+        type: string
+      image_id:
+        example: b1c4b160-b9e9-4f0c-83ec-9119e1f467f9
+        type: string
+      last_update:
+        example: "2026-05-20"
+        type: string
+      name:
+        example: Keyboard
+        type: string
+      price:
+        example: 289.9
+        type: number
+      product_id:
+        example: b1c4b160-b9e9-4f0c-83ec-9119e1f467f9
+        type: string
+      supplier_id:
+        example: b1c4b160-b9e9-4f0c-83ec-9119e1f467f9
+        type: string
+    type: object
+  dto.ProductStockRequest:
+    properties:
+      amount:
+        example: 2
+        minimum: 1
+        type: integer
+    required:
+    - amount
+    type: object
+  dto.SuccessResponse:
+    properties:
+      status:
+        example: created
+        type: string
+    type: object
+  dto.SupplierListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.SupplierResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      total:
+        example: 5
+        type: integer
+    type: object
+  dto.SupplierRequest:
+    properties:
+      address:
+        $ref: '#/definitions/dto.AddressRequest'
+      name:
+        example: Super Keyboard Supplier
+        type: string
+      phone_number:
+        example: "+79995351675"
+        type: string
+    required:
+    - address
+    - name
+    - phone_number
+    type: object
+  dto.SupplierResponse:
+    properties:
+      address:
+        $ref: '#/definitions/dto.AddressResponse'
+      name:
+        example: Super Keyboard Supplier
+        type: string
+      phone_number:
+        example: "+79995351675"
+        type: string
+      supplier_id:
+        example: b1c4b160-b9e9-4f0c-83ec-9119e1f467f9
+        type: string
+    type: object
+info:
+  contact: {}
+  description: REST API for shop service
+  title: Shop API
+  version: "1.0"
+paths:
+  /clients:
+    get:
+      description: Get clients list with optional params
+      parameters:
+      - description: Client name
+        in: query
+        name: name
+        type: string
+      - description: Client surname
+        in: query
+        name: surname
+        type: string
+      - default: 100
+        description: Limit
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ClientListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get clients with params
+      tags:
+      - clients
+    post:
+      consumes:
+      - application/json
+      description: Create new client
+      parameters:
+      - description: Client data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ClientRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create client
+      tags:
+      - clients
+  /clients/{id}:
+    delete:
+      description: Delete client by id
+      parameters:
+      - description: Client ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete client
+      tags:
+      - clients
+  /clients/{id}/address:
+    patch:
+      consumes:
+      - application/json
+      description: Change address of client
+      parameters:
+      - description: Client ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Address data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Change client address
+      tags:
+      - clients
+  /images/{id}:
+    delete:
+      description: Delete product image by id
+      parameters:
+      - description: Image ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete image
+      tags:
+      - images
+    get:
+      description: Get product image by image id
+      parameters:
+      - description: Image ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get image
+      tags:
+      - images
+    put:
+      consumes:
+      - application/json
+      description: Change product image data
+      parameters:
+      - description: Image ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ImageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Change image
+      tags:
+      - images
+  /products:
+    get:
+      description: Get products list with optional params
+      parameters:
+      - default: 100
+        description: Limit
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProductListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get products with params
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Create new product
+      parameters:
+      - description: Product data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create product
+      tags:
+      - products
+  /products/{id}:
+    delete:
+      description: Delete product by id
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete product
+      tags:
+      - products
+    get:
+      description: Get product by id
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProductResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get product
+      tags:
+      - products
+  /products/{id}/decrease-stock:
+    post:
+      consumes:
+      - application/json
+      description: Decrease product stock by N
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Product stock data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ProductStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Decrease product stock
+      tags:
+      - products
+  /products/{id}/image:
+    get:
+      description: Get product image by product id
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get product image
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Add image for product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ImageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Add product image
+      tags:
+      - products
+  /suppliers:
+    get:
+      description: Get suppliers list with optional params
+      parameters:
+      - default: 100
+        description: Limit
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SupplierListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get suppliers with params
+      tags:
+      - suppliers
+    post:
+      consumes:
+      - application/json
+      description: Create new supplier
+      parameters:
+      - description: Supplier data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SupplierRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create supplier
+      tags:
+      - suppliers
+  /suppliers/{id}:
+    delete:
+      description: Delete supplier by id
+      parameters:
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete supplier
+      tags:
+      - suppliers
+    get:
+      description: Get supplier by id
+      parameters:
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SupplierResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get supplier
+      tags:
+      - suppliers
+  /suppliers/{id}/address:
+    patch:
+      consumes:
+      - application/json
+      description: Change address of supplier
+      parameters:
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Address data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Change supplier address
+      tags:
+      - suppliers
+swagger: "2.0"

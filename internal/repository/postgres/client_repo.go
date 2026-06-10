@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	"shop_api/internal/dao"
+	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"shop_api/pkg/postgres"
 
@@ -19,9 +19,9 @@ func NewClientRepoPostgres(pg *postgres.Postgres) repository.ClientRepository {
 	}
 }
 
-func (r *clientRepoPostgres) Save(client *dao.Client) error {
+func (r *clientRepoPostgres) Save(client *entity.Client) error {
 	if client == nil {
-		return ErrNilEntity
+		return repository.ErrNilEntity
 	}
 
 	query := `
@@ -38,7 +38,7 @@ func (r *clientRepoPostgres) Save(client *dao.Client) error {
 	)
 
 	if err != nil {
-		return ErrQueryExec
+		return repository.ErrQueryExec
 	}
 
 	return nil
@@ -50,84 +50,49 @@ func (r *clientRepoPostgres) RemoveByID(id uuid.UUID) error {
 		WHERE id = $1
 	`
 
-	_, err := r.pg.Pool.Exec(context.Background(), query, id)
+	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, id)
 
-	if err != nil {
-		return ErrQueryExec
+	if isFKViolation(err) {
+		return repository.ErrDependentEntity
+	} else if err != nil {
+		return repository.ErrQueryExec
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return repository.ErrNoRows
 	}
 
 	return nil
 }
 
-func (r *clientRepoPostgres) GetByID(id uuid.UUID) (*dao.Client, error) {
-	var client dao.Client
+func (r *clientRepoPostgres) GetWithParams(name, surname *string, limit, offset int) ([]*entity.Client, error) {
 	query := `
 		SELECT
 			id, client_name, client_surname, birthdate,
 			gender, registration_date, address_id
 		FROM clients
-		WHERE id = $1
+		WHERE
+			($1::text IS NULL OR client_name = $1)
+			AND ($2::text IS NULL OR client_surname = $2)
+		LIMIT $3
+		OFFSET $4
 	`
 
-	err := r.pg.Pool.QueryRow(context.Background(), query, id).Scan(
-		&client.ID, &client.Name, &client.Surname, &client.Birthdate,
-		&client.Gender, &client.RegistrationDate, &client.AddressID,
-	)
-
+	rows, err := r.pg.Pool.Query(context.Background(), query, name, surname, limit, offset)
 	if err != nil {
-		return nil, ErrQueryExec
-	}
-
-	return &client, nil
-}
-
-func (r *clientRepoPostgres) GetByName(name, surname string) (*dao.Client, error) {
-	var client dao.Client
-	query := `
-		SELECT
-			id, client_name, client_surname, birthdate,
-			gender, registration_date, address_id
-		FROM clients
-		WHERE client_name = $1 AND client_surname = $2
-	`
-
-	err := r.pg.Pool.QueryRow(context.Background(), query, name, surname).Scan(
-		&client.ID, &client.Name, &client.Surname, &client.Birthdate,
-		&client.Gender, &client.RegistrationDate, &client.AddressID,
-	)
-
-	if err != nil {
-		return nil, ErrQueryExec
-	}
-
-	return &client, nil
-}
-
-func (r *clientRepoPostgres) GetAll(limit, offset int) ([]*dao.Client, error) {
-	query := `
-		SELECT
-			id, client_name, client_surname, birthdate,
-			gender, registration_date, address_id
-		FROM clients
-		LIMIT $1
-		OFFSET $2
-	`
-
-	rows, err := r.pg.Pool.Query(context.Background(), query, limit, offset)
-	if err != nil {
-		return nil, ErrQueryExec
+		return nil, repository.ErrQueryExec
 	}
 	defer rows.Close()
 
-	var clients []*dao.Client
+	var clients []*entity.Client
 	for rows.Next() {
-		var client dao.Client
+		var client entity.Client
 		err := rows.Scan(
 			&client.ID, &client.Name, &client.Surname, &client.Birthdate,
 			&client.Gender, &client.RegistrationDate, &client.AddressID,
 		)
 		if err != nil {
-			return nil, ErrRowScan
+			return nil, repository.ErrRowScan
 		}
 		clients = append(clients, &client)
 	}
@@ -142,10 +107,14 @@ func (r *clientRepoPostgres) UpdateAddress(clientID, addressID uuid.UUID) error 
 		WHERE id = $1
 	`
 
-	_, err := r.pg.Pool.Exec(context.Background(), query, clientID, addressID)
+	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, clientID, addressID)
 
 	if err != nil {
-		return ErrQueryExec
+		return repository.ErrQueryExec
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return repository.ErrNoRows
 	}
 
 	return nil

@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	"shop_api/internal/dao"
+	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"shop_api/pkg/postgres"
 
@@ -19,9 +19,9 @@ func NewAddressRepoPostgres(pg *postgres.Postgres) repository.AddressRepository 
 	}
 }
 
-func (r *addressRepoPostgres) Save(address *dao.Address) (uuid.UUID, error) {
+func (r *addressRepoPostgres) Save(address *entity.Address) (uuid.UUID, error) {
 	if address == nil {
-		return uuid.Nil, ErrNilEntity
+		return uuid.Nil, repository.ErrNilEntity
 	}
 
 	query := `
@@ -37,14 +37,16 @@ func (r *addressRepoPostgres) Save(address *dao.Address) (uuid.UUID, error) {
 	err := r.pg.Pool.QueryRow(context.Background(), query,
 		address.Country, address.City, address.Street).Scan(&id)
 
-	if err != nil {
-		return uuid.Nil, ErrQueryExec
+	if err == postgres.ErrNoRows {
+		return uuid.Nil, repository.ErrNoRows
+	} else if err != nil {
+		return uuid.Nil, repository.ErrQueryExec
 	}
 
 	return id, nil
 }
 
-func (r *addressRepoPostgres) Find(address *dao.Address) (uuid.UUID, error) {
+func (r *addressRepoPostgres) Find(address *entity.Address) (uuid.UUID, error) {
 	query := `
 		SELECT id
 		FROM addresses
@@ -55,15 +57,17 @@ func (r *addressRepoPostgres) Find(address *dao.Address) (uuid.UUID, error) {
 	err := r.pg.Pool.QueryRow(context.Background(), query,
 		address.Country, address.City, address.Street).Scan(&id)
 
-	if err != nil {
-		return uuid.Nil, ErrQueryExec
+	if err == postgres.ErrNoRows {
+		return uuid.Nil, repository.ErrNoRows
+	} else if err != nil {
+		return uuid.Nil, repository.ErrQueryExec
 	}
 
 	return id, nil
 }
 
-func (r *addressRepoPostgres) GetByID(id uuid.UUID) (*dao.Address, error) {
-	var address dao.Address
+func (r *addressRepoPostgres) GetByID(id uuid.UUID) (*entity.Address, error) {
+	var address entity.Address
 	query := `
 		SELECT
 			id, country, city, street
@@ -75,8 +79,10 @@ func (r *addressRepoPostgres) GetByID(id uuid.UUID) (*dao.Address, error) {
 		&address.ID, &address.Country, &address.City, &address.Street,
 	)
 
-	if err != nil {
-		return nil, ErrQueryExec
+	if err == postgres.ErrNoRows {
+		return nil, repository.ErrNoRows
+	} else if err != nil {
+		return nil, repository.ErrQueryExec
 	}
 
 	return &address, nil

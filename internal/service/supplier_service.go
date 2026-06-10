@@ -1,7 +1,7 @@
 package service
 
 import (
-	"shop_api/internal/dao"
+	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
 	"github.com/google/uuid"
@@ -20,7 +20,7 @@ func NewSupplierService(supplierRepo repository.SupplierRepository,
 	}
 }
 
-func (s *SupplierService) AddSupplier(supplier *dao.Supplier, address *dao.Address) error {
+func (s *SupplierService) AddSupplier(supplier *entity.Supplier, address *entity.Address) error {
 	if len(supplier.Name) == 0 || len(supplier.Name) > 100 {
 		return ErrInvalidNameLength
 	}
@@ -42,28 +42,65 @@ func (s *SupplierService) AddSupplier(supplier *dao.Supplier, address *dao.Addre
 	return nil
 }
 
-func (s *SupplierService) GetSupplier(id uuid.UUID) (*dao.Supplier, error) {
-	return s.supplierRepo.GetByID(id)
+func (s *SupplierService) GetSupplier(id uuid.UUID) (*entity.Supplier, error) {
+	supplier, err := s.supplierRepo.GetByID(id)
+
+	if err == repository.ErrNoRows {
+		return nil, ErrSupplierNotFound
+	} else if err != nil {
+		return nil, ErrServerInternal
+	}
+
+	return supplier, nil
 }
 
 func (s *SupplierService) RemoveSupplier(supplierID uuid.UUID) error {
-	return s.supplierRepo.RemoveByID(supplierID)
+	err := s.supplierRepo.RemoveByID(supplierID)
+
+	switch err {
+	case repository.ErrNoRows:
+		return ErrSupplierNotFound
+	case repository.ErrDependentEntity:
+		return ErrDependentEntity
+	}
+
+	if err != nil {
+		return ErrServerInternal
+	}
+
+	return nil
 }
 
-func (s *SupplierService) GetAllSuppliers(limit, offset int) ([]*dao.Supplier, error) {
+func (s *SupplierService) GetSuppliersWithParams(limit, offset int) ([]*entity.Supplier, int, int, error) {
 	if limit < 1 || limit > 100 {
 		limit = 100
 	}
+
 	if offset < 0 {
 		offset = 0
 	}
-	return s.supplierRepo.GetAll(limit, offset)
+
+	suppliers, err := s.supplierRepo.GetWithParams(limit, offset)
+
+	if err != nil {
+		return nil, 0, 0, ErrServerInternal
+	}
+
+	return suppliers, limit, offset, nil
 }
 
-func (s *SupplierService) ChangeSupplierAddress(supplierID uuid.UUID, newAddress *dao.Address) error {
+func (s *SupplierService) ChangeSupplierAddress(supplierID uuid.UUID, newAddress *entity.Address) error {
 	addressID, err := s.addressService.MustGetAddressID(newAddress)
+
 	if err != nil {
 		return err
 	}
-	return s.supplierRepo.UpdateAddress(supplierID, addressID)
+
+	if err := s.supplierRepo.UpdateAddress(supplierID, addressID); err == repository.ErrNoRows {
+		return ErrSupplierNotFound
+	} else if err != nil {
+		return ErrServerInternal
+	}
+
+	return nil
 }

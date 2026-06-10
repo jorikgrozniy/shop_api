@@ -1,7 +1,7 @@
 package service
 
 import (
-	"shop_api/internal/dao"
+	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"time"
 
@@ -21,7 +21,7 @@ func NewClientService(clientRepo repository.ClientRepository,
 	}
 }
 
-func (s *ClientService) AddClient(client *dao.Client, address *dao.Address) error {
+func (s *ClientService) AddClient(client *entity.Client, address *entity.Address) error {
 	if len(client.Name) == 0 || len(client.Name) > 100 {
 		return ErrInvalidNameLength
 	}
@@ -53,27 +53,59 @@ func (s *ClientService) AddClient(client *dao.Client, address *dao.Address) erro
 }
 
 func (s *ClientService) RemoveClient(clientID uuid.UUID) error {
-	return s.clientRepo.RemoveByID(clientID)
+	err := s.clientRepo.RemoveByID(clientID)
+
+	switch err {
+	case repository.ErrNoRows:
+		return ErrClientNotFound
+	case repository.ErrDependentEntity:
+		return ErrDependentEntity
+	}
+
+	if err != nil {
+		return ErrServerInternal
+	}
+
+	return nil
 }
 
-func (s *ClientService) GetClientByName(name, surname string) (*dao.Client, error) {
-	return s.clientRepo.GetByName(name, surname)
-}
-
-func (s *ClientService) GetAllClients(limit, offset int) ([]*dao.Client, error) {
+func (s *ClientService) GetClientsWithParams(name, surname *string, limit, offset int) ([]*entity.Client, int, int, error) {
 	if limit < 1 || limit > 100 {
 		limit = 100
 	}
+
 	if offset < 0 {
 		offset = 0
 	}
-	return s.clientRepo.GetAll(limit, offset)
+
+	if *name == "" {
+		name = nil
+	}
+
+	if *surname == "" {
+		surname = nil
+	}
+
+	clients, err := s.clientRepo.GetWithParams(name, surname, limit, offset)
+	if err != nil {
+		return nil, 0, 0, ErrServerInternal
+	}
+
+	return clients, limit, offset, nil
 }
 
-func (s *ClientService) ChangeClientAddress(clientID uuid.UUID, newAddress *dao.Address) error {
+func (s *ClientService) ChangeClientAddress(clientID uuid.UUID, newAddress *entity.Address) error {
 	addressID, err := s.addressService.MustGetAddressID(newAddress)
+
 	if err != nil {
 		return err
 	}
-	return s.clientRepo.UpdateAddress(clientID, addressID)
+
+	if err := s.clientRepo.UpdateAddress(clientID, addressID); err == repository.ErrNoRows {
+		return ErrClientNotFound
+	} else if err != nil {
+		return ErrServerInternal
+	}
+
+	return nil
 }

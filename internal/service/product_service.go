@@ -1,7 +1,7 @@
 package service
 
 import (
-	"shop_api/internal/dao"
+	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
 	"github.com/google/uuid"
@@ -22,7 +22,7 @@ func NewProductService(productRepo repository.ProductRepository,
 	}
 }
 
-func (s *ProductService) AddProduct(product *dao.Product, image *dao.Image) error {
+func (s *ProductService) AddProduct(product *entity.Product, image *entity.Image) error {
 	if len(product.Name) == 0 || len(product.Name) > 100 {
 		return ErrInvalidNameLength
 	}
@@ -39,17 +39,17 @@ func (s *ProductService) AddProduct(product *dao.Product, image *dao.Image) erro
 		return ErrInvalidAvailableStock
 	}
 
-	if _, err := s.supplierService.GetSupplier(product.SupplierID); err != nil {
+	if _, err := s.supplierService.GetSupplier(*product.SupplierID); err != nil {
 		return ErrSupplierNotFound
 	}
 
 	if image != nil {
-		imageID, err := s.imageService.AddImage(image.Image)
+		imageID, err := s.imageService.AddImage(image)
 		if err != nil {
 			return err
 		}
 
-		product.ImageID = imageID
+		product.ImageID = &imageID
 	}
 
 	if err := s.productRepo.Save(product); err != nil {
@@ -59,40 +59,95 @@ func (s *ProductService) AddProduct(product *dao.Product, image *dao.Image) erro
 	return nil
 }
 
-func (s *ProductService) AddProductImage(productID uuid.UUID, image []byte) error {
+func (s *ProductService) AddProductImage(productID uuid.UUID, image *entity.Image) error {
 	imageID, err := s.imageService.AddImage(image)
+
 	if err != nil {
 		return err
 	}
-	return s.productRepo.UpdateImage(productID, imageID)
-}
 
-func (s *ProductService) GetProductImage(productID uuid.UUID) ([]byte, error) {
-	product, err := s.productRepo.GetByID(productID)
-	if err != nil {
-		return nil, ErrProductNotFound
+	if err := s.productRepo.UpdateImage(productID, imageID); err == repository.ErrNoRows {
+		return ErrProductNotFound
+	} else if err != nil {
+		return ErrServerInternal
 	}
-	return s.imageService.GetImage(product.ImageID)
+
+	return nil
 }
 
-func (s *ProductService) GetProduct(id uuid.UUID) (*dao.Product, error) {
-	return s.productRepo.GetByID(id)
+func (s *ProductService) GetProductImage(productID uuid.UUID) (*entity.Image, error) {
+	product, err := s.productRepo.GetByID(productID)
+
+	if err == repository.ErrNoRows {
+		return nil, ErrProductNotFound
+	} else if err != nil {
+		return nil, ErrServerInternal
+	}
+
+	if product.ImageID == nil {
+		return nil, ErrImageNotFound
+	}
+
+	return s.imageService.GetImage(*product.ImageID)
+}
+
+func (s *ProductService) GetProduct(id uuid.UUID) (*entity.Product, error) {
+	product, err := s.productRepo.GetByID(id)
+
+	if err == repository.ErrNoRows {
+		return nil, ErrProductNotFound
+	} else if err != nil {
+		return nil, ErrServerInternal
+	}
+
+	return product, nil
 }
 
 func (s *ProductService) DecreaseAvailableStock(productID uuid.UUID, value int) error {
-	return s.productRepo.UpdateAvailableStock(productID, -value)
+	if value < 1 {
+		return ErrInvalidAmount
+	}
+
+	if err := s.productRepo.UpdateAvailableStock(productID, -value); err == repository.ErrNoRows {
+		return ErrProductNotFound
+	} else if err != nil {
+		return ErrServerInternal
+	}
+
+	return nil
 }
 
 func (s *ProductService) RemoveProduct(productID uuid.UUID) error {
-	return s.productRepo.RemoveByID(productID)
+	err := s.productRepo.RemoveByID(productID)
+
+	switch err {
+	case repository.ErrNoRows:
+		return ErrProductNotFound
+	case repository.ErrDependentEntity:
+		return ErrDependentEntity
+	}
+
+	if err != nil {
+		return ErrServerInternal
+	}
+
+	return nil
 }
 
-func (s *ProductService) GetAllProducts(limit, offset int) ([]*dao.Product, error) {
+func (s *ProductService) GetProductsWithParams(limit, offset int) ([]*entity.Product, int, int, error) {
 	if limit < 1 || limit > 100 {
 		limit = 100
 	}
+
 	if offset < 0 {
 		offset = 0
 	}
-	return s.productRepo.GetAll(limit, offset)
+
+	products, err := s.productRepo.GetWithParams(limit, offset)
+
+	if err != nil {
+		return nil, 0, 0, ErrServerInternal
+	}
+
+	return products, limit, offset, nil
 }
