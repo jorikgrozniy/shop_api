@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"time"
@@ -21,7 +22,7 @@ func NewClientService(clientRepo repository.ClientRepository,
 	}
 }
 
-func (s *ClientService) AddClient(client *entity.Client, address *entity.Address) error {
+func (s *ClientService) AddClient(ctx context.Context, client *entity.Client, address *entity.Address) error {
 	if len(client.Name) == 0 || len(client.Name) > 100 {
 		return ErrInvalidNameLength
 	}
@@ -39,21 +40,21 @@ func (s *ClientService) AddClient(client *entity.Client, address *entity.Address
 		return ErrInvalidGender
 	}
 
-	addressID, err := s.addressService.MustGetAddressID(address)
+	addressID, err := s.addressService.MustGetAddressID(ctx, address)
 	if err != nil {
 		return err
 	}
 	client.AddressID = addressID
 
-	if err := s.clientRepo.Save(client); err != nil {
+	if err := s.clientRepo.Save(ctx, client); err != nil {
 		return ErrServerInternal
 	}
 
 	return nil
 }
 
-func (s *ClientService) RemoveClient(clientID uuid.UUID) error {
-	err := s.clientRepo.RemoveByID(clientID)
+func (s *ClientService) RemoveClient(ctx context.Context, clientID uuid.UUID) error {
+	err := s.clientRepo.RemoveByID(ctx, clientID)
 
 	switch err {
 	case repository.ErrNoRows:
@@ -69,7 +70,8 @@ func (s *ClientService) RemoveClient(clientID uuid.UUID) error {
 	return nil
 }
 
-func (s *ClientService) GetClientsWithParams(name, surname *string, limit, offset int) ([]*entity.Client, int, int, error) {
+func (s *ClientService) GetClientsWithParams(
+	ctx context.Context, name, surname *string, limit, offset int) ([]*entity.Client, int, int, error) {
 	if limit < 1 || limit > 100 {
 		limit = 100
 	}
@@ -86,7 +88,7 @@ func (s *ClientService) GetClientsWithParams(name, surname *string, limit, offse
 		surname = nil
 	}
 
-	clients, err := s.clientRepo.GetWithParams(name, surname, limit, offset)
+	clients, err := s.clientRepo.GetWithParams(ctx, name, surname, limit, offset)
 	if err != nil {
 		return nil, 0, 0, ErrServerInternal
 	}
@@ -94,14 +96,14 @@ func (s *ClientService) GetClientsWithParams(name, surname *string, limit, offse
 	return clients, limit, offset, nil
 }
 
-func (s *ClientService) ChangeClientAddress(clientID uuid.UUID, newAddress *entity.Address) error {
-	addressID, err := s.addressService.MustGetAddressID(newAddress)
+func (s *ClientService) ChangeClientAddress(ctx context.Context, clientID uuid.UUID, newAddress *entity.Address) error {
+	addressID, err := s.addressService.MustGetAddressID(ctx, newAddress)
 
 	if err != nil {
 		return err
 	}
 
-	if err := s.clientRepo.UpdateAddress(clientID, addressID); err == repository.ErrNoRows {
+	if err := s.clientRepo.UpdateAddress(ctx, clientID, addressID); err == repository.ErrNoRows {
 		return ErrClientNotFound
 	} else if err != nil {
 		return ErrServerInternal

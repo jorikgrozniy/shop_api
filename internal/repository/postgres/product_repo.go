@@ -19,7 +19,7 @@ func NewProductRepoPostgres(pg *postgres.Postgres) repository.ProductRepository 
 	}
 }
 
-func (r *productRepoPostgres) Save(product *entity.Product) error {
+func (r *productRepoPostgres) Save(ctx context.Context, product *entity.Product) error {
 	if product == nil {
 		return repository.ErrNilEntity
 	}
@@ -33,7 +33,7 @@ func (r *productRepoPostgres) Save(product *entity.Product) error {
 		)
 	`
 
-	_, err := r.pg.Pool.Exec(context.Background(), query,
+	_, err := r.pg.Pool.Exec(ctx, query,
 		product.Name, product.Category, product.Price, product.AvailableStock,
 		product.LastUpdate, product.SupplierID, product.ImageID,
 	)
@@ -45,14 +45,14 @@ func (r *productRepoPostgres) Save(product *entity.Product) error {
 	return nil
 }
 
-func (r *productRepoPostgres) UpdateAvailableStock(id uuid.UUID, value int) error {
+func (r *productRepoPostgres) UpdateAvailableStock(ctx context.Context, id uuid.UUID, value int) error {
 	query := `
 		UPDATE products
 		SET available_stock = available_stock + $2
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, id, value)
+	cmdTag, err := r.pg.Pool.Exec(ctx, query, id, value)
 
 	if err != nil {
 		return repository.ErrQueryExec
@@ -65,14 +65,14 @@ func (r *productRepoPostgres) UpdateAvailableStock(id uuid.UUID, value int) erro
 	return nil
 }
 
-func (r *productRepoPostgres) UpdateImage(productID, imageID uuid.UUID) error {
+func (r *productRepoPostgres) UpdateImage(ctx context.Context, productID, imageID uuid.UUID) error {
 	query := `
 		UPDATE products
 		SET image_id = $2
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, productID, imageID)
+	cmdTag, err := r.pg.Pool.Exec(ctx, query, productID, imageID)
 
 	if err != nil {
 		return repository.ErrQueryExec
@@ -85,7 +85,7 @@ func (r *productRepoPostgres) UpdateImage(productID, imageID uuid.UUID) error {
 	return nil
 }
 
-func (r *productRepoPostgres) GetByID(id uuid.UUID) (*entity.Product, error) {
+func (r *productRepoPostgres) GetByID(ctx context.Context, id uuid.UUID) (*entity.Product, error) {
 	var product entity.Product
 	query := `
 		SELECT
@@ -95,7 +95,7 @@ func (r *productRepoPostgres) GetByID(id uuid.UUID) (*entity.Product, error) {
 		WHERE id = $1
 	`
 
-	err := r.pg.Pool.QueryRow(context.Background(), query, id).Scan(
+	err := r.pg.Pool.QueryRow(ctx, query, id).Scan(
 		&product.ID, &product.Name, &product.Category, &product.Price, &product.AvailableStock,
 		&product.LastUpdate, &product.SupplierID, &product.ImageID,
 	)
@@ -109,7 +109,7 @@ func (r *productRepoPostgres) GetByID(id uuid.UUID) (*entity.Product, error) {
 	return &product, nil
 }
 
-func (r *productRepoPostgres) GetWithParams(limit, offset int) ([]*entity.Product, error) {
+func (r *productRepoPostgres) GetWithParams(ctx context.Context, limit, offset int) ([]*entity.Product, error) {
 	query := `
 		SELECT
 			id, name, category, price, available_stock,
@@ -119,7 +119,7 @@ func (r *productRepoPostgres) GetWithParams(limit, offset int) ([]*entity.Produc
 		OFFSET $2
 	`
 
-	rows, err := r.pg.Pool.Query(context.Background(), query, limit, offset)
+	rows, err := r.pg.Pool.Query(ctx, query, limit, offset)
 	if err != nil {
 		return nil, repository.ErrQueryExec
 	}
@@ -141,13 +141,13 @@ func (r *productRepoPostgres) GetWithParams(limit, offset int) ([]*entity.Produc
 	return products, nil
 }
 
-func (r *productRepoPostgres) RemoveByID(id uuid.UUID) error {
+func (r *productRepoPostgres) RemoveByID(ctx context.Context, id uuid.UUID) error {
 	query := `
 		DELETE FROM products
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, id)
+	cmdTag, err := r.pg.Pool.Exec(ctx, query, id)
 
 	if isFKViolation(err) {
 		return repository.ErrDependentEntity

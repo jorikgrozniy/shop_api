@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
@@ -22,7 +23,7 @@ func NewProductService(productRepo repository.ProductRepository,
 	}
 }
 
-func (s *ProductService) AddProduct(product *entity.Product, image *entity.Image) error {
+func (s *ProductService) AddProduct(ctx context.Context, product *entity.Product, image *entity.Image) error {
 	if len(product.Name) == 0 || len(product.Name) > 100 {
 		return ErrInvalidNameLength
 	}
@@ -39,12 +40,12 @@ func (s *ProductService) AddProduct(product *entity.Product, image *entity.Image
 		return ErrInvalidAvailableStock
 	}
 
-	if _, err := s.supplierService.GetSupplier(*product.SupplierID); err != nil {
+	if _, err := s.supplierService.GetSupplier(ctx, *product.SupplierID); err != nil {
 		return ErrSupplierNotFound
 	}
 
 	if image != nil {
-		imageID, err := s.imageService.AddImage(image)
+		imageID, err := s.imageService.AddImage(ctx, image)
 		if err != nil {
 			return err
 		}
@@ -52,21 +53,21 @@ func (s *ProductService) AddProduct(product *entity.Product, image *entity.Image
 		product.ImageID = &imageID
 	}
 
-	if err := s.productRepo.Save(product); err != nil {
+	if err := s.productRepo.Save(ctx, product); err != nil {
 		return ErrServerInternal
 	}
 
 	return nil
 }
 
-func (s *ProductService) AddProductImage(productID uuid.UUID, image *entity.Image) error {
-	imageID, err := s.imageService.AddImage(image)
+func (s *ProductService) AddProductImage(ctx context.Context, productID uuid.UUID, image *entity.Image) error {
+	imageID, err := s.imageService.AddImage(ctx, image)
 
 	if err != nil {
 		return err
 	}
 
-	if err := s.productRepo.UpdateImage(productID, imageID); err == repository.ErrNoRows {
+	if err := s.productRepo.UpdateImage(ctx, productID, imageID); err == repository.ErrNoRows {
 		return ErrProductNotFound
 	} else if err != nil {
 		return ErrServerInternal
@@ -75,8 +76,8 @@ func (s *ProductService) AddProductImage(productID uuid.UUID, image *entity.Imag
 	return nil
 }
 
-func (s *ProductService) GetProductImage(productID uuid.UUID) (*entity.Image, error) {
-	product, err := s.productRepo.GetByID(productID)
+func (s *ProductService) GetProductImage(ctx context.Context, productID uuid.UUID) (*entity.Image, error) {
+	product, err := s.productRepo.GetByID(ctx, productID)
 
 	if err == repository.ErrNoRows {
 		return nil, ErrProductNotFound
@@ -88,11 +89,11 @@ func (s *ProductService) GetProductImage(productID uuid.UUID) (*entity.Image, er
 		return nil, ErrImageNotFound
 	}
 
-	return s.imageService.GetImage(*product.ImageID)
+	return s.imageService.GetImage(ctx, *product.ImageID)
 }
 
-func (s *ProductService) GetProduct(id uuid.UUID) (*entity.Product, error) {
-	product, err := s.productRepo.GetByID(id)
+func (s *ProductService) GetProduct(ctx context.Context, id uuid.UUID) (*entity.Product, error) {
+	product, err := s.productRepo.GetByID(ctx, id)
 
 	if err == repository.ErrNoRows {
 		return nil, ErrProductNotFound
@@ -103,12 +104,12 @@ func (s *ProductService) GetProduct(id uuid.UUID) (*entity.Product, error) {
 	return product, nil
 }
 
-func (s *ProductService) DecreaseAvailableStock(productID uuid.UUID, value int) error {
+func (s *ProductService) DecreaseAvailableStock(ctx context.Context, productID uuid.UUID, value int) error {
 	if value < 1 {
 		return ErrInvalidAmount
 	}
 
-	if err := s.productRepo.UpdateAvailableStock(productID, -value); err == repository.ErrNoRows {
+	if err := s.productRepo.UpdateAvailableStock(ctx, productID, -value); err == repository.ErrNoRows {
 		return ErrProductNotFound
 	} else if err != nil {
 		return ErrServerInternal
@@ -117,8 +118,8 @@ func (s *ProductService) DecreaseAvailableStock(productID uuid.UUID, value int) 
 	return nil
 }
 
-func (s *ProductService) RemoveProduct(productID uuid.UUID) error {
-	err := s.productRepo.RemoveByID(productID)
+func (s *ProductService) RemoveProduct(ctx context.Context, productID uuid.UUID) error {
+	err := s.productRepo.RemoveByID(ctx, productID)
 
 	switch err {
 	case repository.ErrNoRows:
@@ -134,7 +135,7 @@ func (s *ProductService) RemoveProduct(productID uuid.UUID) error {
 	return nil
 }
 
-func (s *ProductService) GetProductsWithParams(limit, offset int) ([]*entity.Product, int, int, error) {
+func (s *ProductService) GetProductsWithParams(ctx context.Context, limit, offset int) ([]*entity.Product, int, int, error) {
 	if limit < 1 || limit > 100 {
 		limit = 100
 	}
@@ -143,7 +144,7 @@ func (s *ProductService) GetProductsWithParams(limit, offset int) ([]*entity.Pro
 		offset = 0
 	}
 
-	products, err := s.productRepo.GetWithParams(limit, offset)
+	products, err := s.productRepo.GetWithParams(ctx, limit, offset)
 
 	if err != nil {
 		return nil, 0, 0, ErrServerInternal
