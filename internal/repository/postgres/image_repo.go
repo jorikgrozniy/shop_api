@@ -19,7 +19,7 @@ func NewImageRepoPostgres(pg *postgres.Postgres) repository.ImageRepository {
 	}
 }
 
-func (r *imageRepoPostgres) Save(image *entity.Image) (uuid.UUID, error) {
+func (r *imageRepoPostgres) Save(ctx context.Context, image *entity.Image) (uuid.UUID, error) {
 	if image == nil {
 		return uuid.Nil, repository.ErrNilEntity
 	}
@@ -31,7 +31,7 @@ func (r *imageRepoPostgres) Save(image *entity.Image) (uuid.UUID, error) {
 	`
 
 	var id uuid.UUID
-	err := r.pg.Pool.QueryRow(context.Background(), query, image.Image).Scan(&id)
+	err := r.pg.Pool.QueryRow(ctx, query, image.Image).Scan(&id)
 
 	if err == postgres.ErrNoRows {
 		return uuid.Nil, repository.ErrNoRows
@@ -42,13 +42,13 @@ func (r *imageRepoPostgres) Save(image *entity.Image) (uuid.UUID, error) {
 	return id, nil
 }
 
-func (r *imageRepoPostgres) RemoveByID(id uuid.UUID) error {
+func (r *imageRepoPostgres) RemoveByID(ctx context.Context, id uuid.UUID) error {
 	query := `
 		DELETE FROM images
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, id)
+	cmdTag, err := r.pg.Pool.Exec(ctx, query, id)
 
 	if isFKViolation(err) {
 		return repository.ErrDependentEntity
@@ -63,7 +63,7 @@ func (r *imageRepoPostgres) RemoveByID(id uuid.UUID) error {
 	return nil
 }
 
-func (r *imageRepoPostgres) GetByID(id uuid.UUID) (*entity.Image, error) {
+func (r *imageRepoPostgres) GetByID(ctx context.Context, id uuid.UUID) (*entity.Image, error) {
 	var image entity.Image
 	query := `
 		SELECT image
@@ -71,7 +71,7 @@ func (r *imageRepoPostgres) GetByID(id uuid.UUID) (*entity.Image, error) {
 		WHERE id = $1
 	`
 
-	err := r.pg.Pool.QueryRow(context.Background(), query, id).Scan(&image.Image)
+	err := r.pg.Pool.QueryRow(ctx, query, id).Scan(&image.Image)
 
 	if err == postgres.ErrNoRows {
 		return nil, repository.ErrNoRows
@@ -82,14 +82,14 @@ func (r *imageRepoPostgres) GetByID(id uuid.UUID) (*entity.Image, error) {
 	return &image, nil
 }
 
-func (r *imageRepoPostgres) Update(id uuid.UUID, newImage []byte) error {
+func (r *imageRepoPostgres) Update(ctx context.Context, id uuid.UUID, newImage []byte) error {
 	query := `
 		UPDATE images
 		SET image = $2
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, id, newImage)
+	cmdTag, err := r.pg.Pool.Exec(ctx, query, id, newImage)
 
 	if err != nil {
 		return repository.ErrQueryExec

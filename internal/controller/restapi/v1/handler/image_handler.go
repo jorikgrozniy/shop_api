@@ -62,7 +62,8 @@ func (h *ImageHandler) ChangeImage(c *gin.Context) {
 	}
 
 	image := mapper.ImageDTOtoDAO(req)
-	if err := h.imageService.ChangeImage(id, image.Image); err != nil {
+	ctx := c.Request.Context()
+	if err := h.imageService.ChangeImage(ctx, id, image.Image); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
@@ -80,7 +81,7 @@ func (h *ImageHandler) ChangeImage(c *gin.Context) {
 // @Tags images
 // @Produce json
 // @Param id path string true "Image ID"
-// @Success 200 {object} dto.SuccessResponse
+// @Success 204 {object} dto.SuccessResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -96,14 +97,15 @@ func (h *ImageHandler) DeleteImage(c *gin.Context) {
 		return
 	}
 
-	if err := h.imageService.RemoveImage(id); err != nil {
+	ctx := c.Request.Context()
+	if err := h.imageService.RemoveImage(ctx, id); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse{
+	c.JSON(http.StatusNoContent, dto.SuccessResponse{
 		Status: "deleted",
 	})
 }
@@ -130,7 +132,8 @@ func (h *ImageHandler) GetImage(c *gin.Context) {
 		return
 	}
 
-	image, err := h.imageService.GetImage(id)
+	ctx := c.Request.Context()
+	image, err := h.imageService.GetImage(ctx, id)
 	if err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),

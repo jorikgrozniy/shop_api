@@ -19,7 +19,7 @@ func NewSupplierRepoPostgres(pg *postgres.Postgres) repository.SupplierRepositor
 	}
 }
 
-func (r *supplierRepoPostgres) Save(supplier *entity.Supplier) error {
+func (r *supplierRepoPostgres) Save(ctx context.Context, supplier *entity.Supplier) error {
 	if supplier == nil {
 		return repository.ErrNilEntity
 	}
@@ -32,7 +32,7 @@ func (r *supplierRepoPostgres) Save(supplier *entity.Supplier) error {
 		)
 	`
 
-	_, err := r.pg.Pool.Exec(context.Background(), query,
+	_, err := r.pg.Pool.Exec(ctx, query,
 		supplier.Name, supplier.AddressID, supplier.PhoneNumber,
 	)
 
@@ -43,13 +43,13 @@ func (r *supplierRepoPostgres) Save(supplier *entity.Supplier) error {
 	return nil
 }
 
-func (r *supplierRepoPostgres) RemoveByID(id uuid.UUID) error {
+func (r *supplierRepoPostgres) RemoveByID(ctx context.Context, id uuid.UUID) error {
 	query := `
 		DELETE FROM suppliers
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, id)
+	cmdTag, err := r.pg.Pool.Exec(ctx, query, id)
 
 	if isFKViolation(err) {
 		return repository.ErrDependentEntity
@@ -64,7 +64,7 @@ func (r *supplierRepoPostgres) RemoveByID(id uuid.UUID) error {
 	return nil
 }
 
-func (r *supplierRepoPostgres) GetByID(id uuid.UUID) (*entity.Supplier, error) {
+func (r *supplierRepoPostgres) GetByID(ctx context.Context, id uuid.UUID) (*entity.Supplier, error) {
 	var supplier entity.Supplier
 	query := `
 		SELECT
@@ -73,7 +73,7 @@ func (r *supplierRepoPostgres) GetByID(id uuid.UUID) (*entity.Supplier, error) {
 		WHERE id = $1
 	`
 
-	err := r.pg.Pool.QueryRow(context.Background(), query, id).Scan(
+	err := r.pg.Pool.QueryRow(ctx, query, id).Scan(
 		&supplier.ID, &supplier.Name, &supplier.AddressID, &supplier.PhoneNumber,
 	)
 
@@ -86,7 +86,7 @@ func (r *supplierRepoPostgres) GetByID(id uuid.UUID) (*entity.Supplier, error) {
 	return &supplier, nil
 }
 
-func (r *supplierRepoPostgres) GetWithParams(limit, offset int) ([]*entity.Supplier, error) {
+func (r *supplierRepoPostgres) GetWithParams(ctx context.Context, limit, offset int) ([]*entity.Supplier, error) {
 	query := `
 		SELECT
 			id, name, address_id, phone_number
@@ -95,7 +95,7 @@ func (r *supplierRepoPostgres) GetWithParams(limit, offset int) ([]*entity.Suppl
 		OFFSET $2
 	`
 
-	rows, err := r.pg.Pool.Query(context.Background(), query, limit, offset)
+	rows, err := r.pg.Pool.Query(ctx, query, limit, offset)
 	if err != nil {
 		return nil, repository.ErrQueryExec
 	}
@@ -117,14 +117,14 @@ func (r *supplierRepoPostgres) GetWithParams(limit, offset int) ([]*entity.Suppl
 	return suppliers, nil
 }
 
-func (r *supplierRepoPostgres) UpdateAddress(supplierID, addressID uuid.UUID) error {
+func (r *supplierRepoPostgres) UpdateAddress(ctx context.Context, supplierID, addressID uuid.UUID) error {
 	query := `
 		UPDATE suppliers
 		SET address_id = $2
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(context.Background(), query, supplierID, addressID)
+	cmdTag, err := r.pg.Pool.Exec(ctx, query, supplierID, addressID)
 
 	if err != nil {
 		return repository.ErrQueryExec
