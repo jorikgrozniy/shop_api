@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"shop_api/config"
 	_ "shop_api/docs"
 	v1 "shop_api/internal/controller/restapi/v1"
 
@@ -9,15 +10,17 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func NewRouter(v1Router *v1.Router) *gin.Engine {
+func NewRouter(v1Router *v1.Router, cfg *config.ServerConfig) *gin.Engine {
 	r := gin.Default()
 
 	api := r.Group("/api")
-	{
-		v1Router.Register(api.Group("/v1"))
-	}
 
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	v1 := api.Group("/v1")
+	{
+		v1Router.Register(v1, cfg.Instance)
+
+		v1.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	return r
 }

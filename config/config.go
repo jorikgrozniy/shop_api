@@ -12,7 +12,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port string
+	Port     string
+	Instance string
 }
 
 type DatabaseConfig struct {
@@ -24,7 +25,8 @@ func NewConfig() *Config {
 
 	return &Config{
 		Server: ServerConfig{
-			Port: getEnv("SERVER_ADDR", ":8080"),
+			Port:     getEnv("HTTP_ADDR", ":8080"),
+			Instance: getEnv("INSTANCE_NAME", "undefined"),
 		},
 
 		Database: DatabaseConfig{
