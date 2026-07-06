@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"net/http"
 	"shop_api/internal/controller/restapi/v1/handler"
 
 	"github.com/gin-gonic/gin"
@@ -28,13 +27,7 @@ func NewRouter(
 	}
 }
 
-func (r *Router) Register(api *gin.RouterGroup, instance string) {
-	api.GET("/whoami", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"instance": instance,
-		})
-	})
-
+func (r *Router) Register(api *gin.RouterGroup) {
 	clients := api.Group("/clients")
 	{
 		clients.POST("", r.clientHandler.AddClient)
