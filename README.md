@@ -1,0 +1,112 @@
+# Shop API
+
+REST API для управления клиентами, товарами, поставщиками и изображениями.
+Проект запускается в Docker Compose окружении с PostgreSQL, nginx и pgAdmin. Основной упор сделан на чистую архитектуру, OpenAPI-документацию, миграции базы данных, reverse proxy, HTTPS, кэширование и балансировку backend-инстансов.
+
+## Содержание
+
+- [Стек](#стек)
+- [Возможности](#возможности)
+- [Инфраструктура](#инфраструктура)
+- [API документация](#api-документация)
+- [Локальный запуск](#локальный-запуск)
+
+## Стек
+
+* Go
+* Gin
+* pgx / pgxpool
+* golang-migrate
+* joho/godotenv
+* Uber Fx
+* PostgreSQL
+* Docker Compose
+* Nginx
+* OpenAPI / Swagger
+* pgAdmin
+* OpenSSL
+
+## Возможности
+
+* REST API с методами GET, POST, PUT, PATCH, DELETE
+
+* Эндпоинты для клиентов, товаров, поставщиков и изображений
+
+* Работа с JSON и application/octet-stream
+
+* Получение параметров из path, query и тела запроса
+
+* Опциональная пагинация:
+    * товары и поставщики: limit, offset
+    * клиенты: limit, offset, name, surname
+    
+* Валидация данных на уровне HTTP-слоя, service-слоя и базы данных
+
+* Полное OpenAPI-описание с примерами, структурами и кодами ошибок
+
+* DTO для API, DAO для базы данных и мапперы между слоями
+
+* Паттерн Repository через интерфейсы репозиториев
+
+* PostgreSQL-миграции, внешние ключи, constraints и триггер для обновления updated_at
+
+* Dependency injection через Uber Fx
+
+* Graceful shutdown через fx.Lifecycle
+
+## Инфраструктура
+
+Проект полностью запускается через Docker Compose. В окружении поднимаются:
+* PostgreSQL
+* основной backend-инстанс
+* два read-only backend-инстанса
+* Nginx
+* pgAdmin
+
+Nginx используется как единая точка входа и выполняет:
+* reverse proxy
+* маршрутизацию
+* раздачу статики
+* HTTPS с самоподписанным сертификатом
+* gzip-сжатие
+* кэширование GET-запросов
+* балансировку GET-запросов между backend-инстансами с весами 2:1:1
+* проксирование pgAdmin по /admin
+* выдачу статуса Nginx по /status
+
+## API документация
+
+Swagger UI доступен по адресу: https://shop.local/api/v1/swagger/index.html
+OpenAPI-документация содержит:
+* описание endpoint-ов
+* request/response структуры
+* примеры данных
+* HTTP-коды ответов
+* описание ошибок
+
+## Локальный запуск
+
+1. Создать **.env**  
+Пример содержится в .env.example. При необходимости изменить значения переменных окружения.
+
+2. Добавить локальный домен  
+В файл **/etc/hosts** добавить:  
+```127.0.0.1 shop.local```
+
+3. Сгенерировать Swagger документацию
+```make swag```
+
+4. Собрать и запустить Postgres  
+```make db-build```
+
+5. Применить миграции  
+```make migrate-up```
+
+6. Создать readonly-пользователя в Postgres  
+```make db-create-readonly-user```
+
+7. Сгенерировать локальный HTTPS-сертификат  
+```make generate-local-cert```
+
+8. Собрать и запустить проект  
+```make build```
