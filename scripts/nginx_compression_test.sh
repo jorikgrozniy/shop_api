@@ -1,3 +1,3 @@
 #!/bin/sh
 
-curl -I -H "Accept-Encoding: gzip" "http://localhost/api/v1/swagger/index.html"
+curl -k -I -H "Accept-Encoding: gzip" "https://shop.local/api/v1/swagger/index.html"
