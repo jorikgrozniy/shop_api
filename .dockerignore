@@ -1,3 +1,5 @@
 Dockerfile
-.env
+*.env
 .gitignore
+*.key
+*.crt

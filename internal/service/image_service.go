@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
@@ -17,8 +18,8 @@ func NewImageService(imageRepo repository.ImageRepository) *ImageService {
 	}
 }
 
-func (s *ImageService) AddImage(image *entity.Image) (uuid.UUID, error) {
-	id, err := s.imageRepo.Save(image)
+func (s *ImageService) AddImage(ctx context.Context, image *entity.Image) (uuid.UUID, error) {
+	id, err := s.imageRepo.Save(ctx, image)
 	if err != nil {
 		return uuid.Nil, ErrServerInternal
 	}
@@ -26,8 +27,8 @@ func (s *ImageService) AddImage(image *entity.Image) (uuid.UUID, error) {
 	return id, nil
 }
 
-func (s *ImageService) ChangeImage(id uuid.UUID, newImage []byte) error {
-	if err := s.imageRepo.Update(id, newImage); err == repository.ErrNoRows {
+func (s *ImageService) ChangeImage(ctx context.Context, id uuid.UUID, newImage []byte) error {
+	if err := s.imageRepo.Update(ctx, id, newImage); err == repository.ErrNoRows {
 		return ErrImageNotFound
 	} else if err != nil {
 		return ErrServerInternal
@@ -36,8 +37,8 @@ func (s *ImageService) ChangeImage(id uuid.UUID, newImage []byte) error {
 	return nil
 }
 
-func (s *ImageService) RemoveImage(id uuid.UUID) error {
-	err := s.imageRepo.RemoveByID(id)
+func (s *ImageService) RemoveImage(ctx context.Context, id uuid.UUID) error {
+	err := s.imageRepo.RemoveByID(ctx, id)
 
 	switch err {
 	case repository.ErrNoRows:
@@ -53,8 +54,8 @@ func (s *ImageService) RemoveImage(id uuid.UUID) error {
 	return nil
 }
 
-func (s *ImageService) GetImage(id uuid.UUID) (*entity.Image, error) {
-	image, err := s.imageRepo.GetByID(id)
+func (s *ImageService) GetImage(ctx context.Context, id uuid.UUID) (*entity.Image, error) {
+	image, err := s.imageRepo.GetByID(ctx, id)
 
 	if err == repository.ErrNoRows {
 		return nil, ErrImageNotFound

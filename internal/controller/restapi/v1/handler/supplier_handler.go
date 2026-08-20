@@ -46,7 +46,8 @@ func (h *SupplierHandler) AddSupplier(c *gin.Context) {
 	supplier := mapper.SupplierDTOtoDAO(req)
 	address := mapper.AddressDTOtoDAO(req.Address)
 
-	if err := h.supplierService.AddSupplier(supplier, address); err != nil {
+	ctx := c.Request.Context()
+	if err := h.supplierService.AddSupplier(ctx, supplier, address); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
@@ -64,7 +65,7 @@ func (h *SupplierHandler) AddSupplier(c *gin.Context) {
 // @Tags suppliers
 // @Produce json
 // @Param id path string true "Supplier ID"
-// @Success 200 {object} dto.SuccessResponse
+// @Success 204 {object} dto.SuccessResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -80,14 +81,15 @@ func (h *SupplierHandler) DeleteSupplier(c *gin.Context) {
 		return
 	}
 
-	if err := h.supplierService.RemoveSupplier(id); err != nil {
+	ctx := c.Request.Context()
+	if err := h.supplierService.RemoveSupplier(ctx, id); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse{
+	c.JSON(http.StatusNoContent, dto.SuccessResponse{
 		Status: "deleted",
 	})
 }
@@ -114,7 +116,8 @@ func (h *SupplierHandler) GetSupplier(c *gin.Context) {
 		return
 	}
 
-	supplier, err := h.supplierService.GetSupplier(id)
+	ctx := c.Request.Context()
+	supplier, err := h.supplierService.GetSupplier(ctx, id)
 	if err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
@@ -122,7 +125,7 @@ func (h *SupplierHandler) GetSupplier(c *gin.Context) {
 		return
 	}
 
-	address, err := h.addressService.GetAddress(supplier.AddressID)
+	address, err := h.addressService.GetAddress(ctx, supplier.AddressID)
 	if err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
@@ -157,7 +160,8 @@ func (h *SupplierHandler) GetSuppliersWithParams(c *gin.Context) {
 		return
 	}
 
-	suppliers, limit, offset, err := h.supplierService.GetSuppliersWithParams(req.Limit, req.Offset)
+	ctx := c.Request.Context()
+	suppliers, limit, offset, err := h.supplierService.GetSuppliersWithParams(ctx, req.Limit, req.Offset)
 	if err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
@@ -170,7 +174,7 @@ func (h *SupplierHandler) GetSuppliersWithParams(c *gin.Context) {
 	suppliersResponse.Offset = offset
 
 	for i, supplier := range suppliers {
-		address, err := h.addressService.GetAddress(supplier.AddressID)
+		address, err := h.addressService.GetAddress(ctx, supplier.AddressID)
 		if err != nil {
 			c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 				Error: err.Error(),
@@ -219,7 +223,8 @@ func (h *SupplierHandler) ChangeSupplierAddress(c *gin.Context) {
 
 	address := mapper.AddressDTOtoDAO(req)
 
-	if err := h.supplierService.ChangeSupplierAddress(supplierID, address); err != nil {
+	ctx := c.Request.Context()
+	if err := h.supplierService.ChangeSupplierAddress(ctx, supplierID, address); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})

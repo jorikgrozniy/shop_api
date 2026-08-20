@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
@@ -20,7 +21,7 @@ func NewSupplierService(supplierRepo repository.SupplierRepository,
 	}
 }
 
-func (s *SupplierService) AddSupplier(supplier *entity.Supplier, address *entity.Address) error {
+func (s *SupplierService) AddSupplier(ctx context.Context, supplier *entity.Supplier, address *entity.Address) error {
 	if len(supplier.Name) == 0 || len(supplier.Name) > 100 {
 		return ErrInvalidNameLength
 	}
@@ -29,21 +30,21 @@ func (s *SupplierService) AddSupplier(supplier *entity.Supplier, address *entity
 		return ErrInvalidPhoneLength
 	}
 
-	addressID, err := s.addressService.MustGetAddressID(address)
+	addressID, err := s.addressService.MustGetAddressID(ctx, address)
 	if err != nil {
 		return err
 	}
 	supplier.AddressID = addressID
 
-	if err := s.supplierRepo.Save(supplier); err != nil {
+	if err := s.supplierRepo.Save(ctx, supplier); err != nil {
 		return ErrServerInternal
 	}
 
 	return nil
 }
 
-func (s *SupplierService) GetSupplier(id uuid.UUID) (*entity.Supplier, error) {
-	supplier, err := s.supplierRepo.GetByID(id)
+func (s *SupplierService) GetSupplier(ctx context.Context, id uuid.UUID) (*entity.Supplier, error) {
+	supplier, err := s.supplierRepo.GetByID(ctx, id)
 
 	if err == repository.ErrNoRows {
 		return nil, ErrSupplierNotFound
@@ -54,8 +55,8 @@ func (s *SupplierService) GetSupplier(id uuid.UUID) (*entity.Supplier, error) {
 	return supplier, nil
 }
 
-func (s *SupplierService) RemoveSupplier(supplierID uuid.UUID) error {
-	err := s.supplierRepo.RemoveByID(supplierID)
+func (s *SupplierService) RemoveSupplier(ctx context.Context, supplierID uuid.UUID) error {
+	err := s.supplierRepo.RemoveByID(ctx, supplierID)
 
 	switch err {
 	case repository.ErrNoRows:
@@ -71,7 +72,7 @@ func (s *SupplierService) RemoveSupplier(supplierID uuid.UUID) error {
 	return nil
 }
 
-func (s *SupplierService) GetSuppliersWithParams(limit, offset int) ([]*entity.Supplier, int, int, error) {
+func (s *SupplierService) GetSuppliersWithParams(ctx context.Context, limit, offset int) ([]*entity.Supplier, int, int, error) {
 	if limit < 1 || limit > 100 {
 		limit = 100
 	}
@@ -80,7 +81,7 @@ func (s *SupplierService) GetSuppliersWithParams(limit, offset int) ([]*entity.S
 		offset = 0
 	}
 
-	suppliers, err := s.supplierRepo.GetWithParams(limit, offset)
+	suppliers, err := s.supplierRepo.GetWithParams(ctx, limit, offset)
 
 	if err != nil {
 		return nil, 0, 0, ErrServerInternal
@@ -89,14 +90,14 @@ func (s *SupplierService) GetSuppliersWithParams(limit, offset int) ([]*entity.S
 	return suppliers, limit, offset, nil
 }
 
-func (s *SupplierService) ChangeSupplierAddress(supplierID uuid.UUID, newAddress *entity.Address) error {
-	addressID, err := s.addressService.MustGetAddressID(newAddress)
+func (s *SupplierService) ChangeSupplierAddress(ctx context.Context, supplierID uuid.UUID, newAddress *entity.Address) error {
+	addressID, err := s.addressService.MustGetAddressID(ctx, newAddress)
 
 	if err != nil {
 		return err
 	}
 
-	if err := s.supplierRepo.UpdateAddress(supplierID, addressID); err == repository.ErrNoRows {
+	if err := s.supplierRepo.UpdateAddress(ctx, supplierID, addressID); err == repository.ErrNoRows {
 		return ErrSupplierNotFound
 	} else if err != nil {
 		return ErrServerInternal

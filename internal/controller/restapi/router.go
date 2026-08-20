@@ -13,11 +13,13 @@ func NewRouter(v1Router *v1.Router) *gin.Engine {
 	r := gin.Default()
 
 	api := r.Group("/api")
-	{
-		v1Router.Register(api.Group("/v1"))
-	}
 
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	v1 := api.Group("/v1")
+	{
+		v1Router.Register(v1)
+
+		v1.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	return r
 }

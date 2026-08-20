@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
@@ -17,20 +18,20 @@ func NewAddressService(addressRepo repository.AddressRepository) *AddressService
 	}
 }
 
-func (s *AddressService) MustGetAddressID(address *entity.Address) (uuid.UUID, error) {
-	if id, found := s.findAddress(address); found {
+func (s *AddressService) MustGetAddressID(ctx context.Context, address *entity.Address) (uuid.UUID, error) {
+	if id, found := s.findAddress(ctx, address); found {
 		return id, nil
 	}
 
-	if id, err := s.addAddress(address); err != nil {
+	if id, err := s.addAddress(ctx, address); err != nil {
 		return uuid.Nil, err
 	} else {
 		return id, nil
 	}
 }
 
-func (s *AddressService) GetAddress(id uuid.UUID) (*entity.Address, error) {
-	address, err := s.addressRepo.GetByID(id)
+func (s *AddressService) GetAddress(ctx context.Context, id uuid.UUID) (*entity.Address, error) {
+	address, err := s.addressRepo.GetByID(ctx, id)
 
 	if err == repository.ErrNoRows {
 		return nil, ErrAddressNotFound
@@ -41,7 +42,7 @@ func (s *AddressService) GetAddress(id uuid.UUID) (*entity.Address, error) {
 	return address, nil
 }
 
-func (s *AddressService) addAddress(address *entity.Address) (uuid.UUID, error) {
+func (s *AddressService) addAddress(ctx context.Context, address *entity.Address) (uuid.UUID, error) {
 	if len(address.Country) == 0 || len(address.Country) > 100 {
 		return uuid.Nil, ErrInvalidCountryLength
 	}
@@ -54,7 +55,7 @@ func (s *AddressService) addAddress(address *entity.Address) (uuid.UUID, error) 
 		return uuid.Nil, ErrInvalidStreetLength
 	}
 
-	id, err := s.addressRepo.Save(address)
+	id, err := s.addressRepo.Save(ctx, address)
 	if err != nil {
 		return uuid.Nil, ErrServerInternal
 	}
@@ -62,8 +63,8 @@ func (s *AddressService) addAddress(address *entity.Address) (uuid.UUID, error) 
 	return id, nil
 }
 
-func (s *AddressService) findAddress(address *entity.Address) (uuid.UUID, bool) {
-	if id, err := s.addressRepo.Find(address); err != nil {
+func (s *AddressService) findAddress(ctx context.Context, address *entity.Address) (uuid.UUID, bool) {
+	if id, err := s.addressRepo.Find(ctx, address); err != nil {
 		return uuid.Nil, false
 	} else {
 		return id, true

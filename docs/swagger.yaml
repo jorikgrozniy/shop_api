@@ -331,8 +331,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "204":
+          description: No Content
           schema:
             $ref: '#/definitions/dto.SuccessResponse'
         "400":
@@ -401,8 +401,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "204":
+          description: No Content
           schema:
             $ref: '#/definitions/dto.SuccessResponse'
         "400":
@@ -564,8 +564,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "204":
+          description: No Content
           schema:
             $ref: '#/definitions/dto.SuccessResponse'
         "400":
@@ -797,8 +797,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "204":
+          description: No Content
           schema:
             $ref: '#/definitions/dto.SuccessResponse'
         "400":
@@ -885,4 +885,6 @@ paths:
       summary: Change supplier address
       tags:
       - suppliers
+schemes:
+- https
 swagger: "2.0"

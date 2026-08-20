@@ -66,7 +66,8 @@ func (h *ProductHandler) AddProduct(c *gin.Context) {
 		image = mapper.ImageDTOtoDAO(req.Image)
 	}
 
-	if err := h.productService.AddProduct(product, image); err != nil {
+	ctx := c.Request.Context()
+	if err := h.productService.AddProduct(ctx, product, image); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
@@ -110,7 +111,8 @@ func (h *ProductHandler) DecreaseProductStock(c *gin.Context) {
 		return
 	}
 
-	if err := h.productService.DecreaseAvailableStock(id, req.Amount); err != nil {
+	ctx := c.Request.Context()
+	if err := h.productService.DecreaseAvailableStock(ctx, id, req.Amount); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
@@ -144,7 +146,8 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 		return
 	}
 
-	product, err := h.productService.GetProduct(id)
+	ctx := c.Request.Context()
+	product, err := h.productService.GetProduct(ctx, id)
 	if err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
@@ -177,7 +180,8 @@ func (h *ProductHandler) GetProductsWithParams(c *gin.Context) {
 		return
 	}
 
-	products, limit, offset, err := h.productService.GetProductsWithParams(req.Limit, req.Offset)
+	ctx := c.Request.Context()
+	products, limit, offset, err := h.productService.GetProductsWithParams(ctx, req.Limit, req.Offset)
 	if err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
@@ -198,7 +202,7 @@ func (h *ProductHandler) GetProductsWithParams(c *gin.Context) {
 // @Tags products
 // @Produce json
 // @Param id path string true "Product ID"
-// @Success 200 {object} dto.SuccessResponse
+// @Success 204 {object} dto.SuccessResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -214,14 +218,15 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	if err := h.productService.RemoveProduct(id); err != nil {
+	ctx := c.Request.Context()
+	if err := h.productService.RemoveProduct(ctx, id); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse{
+	c.JSON(http.StatusNoContent, dto.SuccessResponse{
 		Status: "deleted",
 	})
 }
@@ -266,7 +271,8 @@ func (h *ProductHandler) AddProductImage(c *gin.Context) {
 	}
 
 	image := mapper.ImageDTOtoDAO(req)
-	if err := h.productService.AddProductImage(id, image); err != nil {
+	ctx := c.Request.Context()
+	if err := h.productService.AddProductImage(ctx, id, image); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
@@ -300,7 +306,8 @@ func (h *ProductHandler) GetProductImage(c *gin.Context) {
 		return
 	}
 
-	image, err := h.productService.GetProductImage(id)
+	ctx := c.Request.Context()
+	image, err := h.productService.GetProductImage(ctx, id)
 	if err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),

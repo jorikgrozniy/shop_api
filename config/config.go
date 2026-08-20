@@ -24,7 +24,7 @@ func NewConfig() *Config {
 
 	return &Config{
 		Server: ServerConfig{
-			Port: getEnv("SERVER_ADDR", ":8080"),
+			Port: getEnv("HTTP_ADDR", ":8080"),
 		},
 
 		Database: DatabaseConfig{

@@ -53,7 +53,8 @@ func (h *ClientHandler) AddClient(c *gin.Context) {
 
 	address := mapper.AddressDTOtoDAO(req.Address)
 
-	if err := h.clientService.AddClient(client, address); err != nil {
+	ctx := c.Request.Context()
+	if err := h.clientService.AddClient(ctx, client, address); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
@@ -71,7 +72,7 @@ func (h *ClientHandler) AddClient(c *gin.Context) {
 // @Tags clients
 // @Produce json
 // @Param id path string true "Client ID"
-// @Success 200 {object} dto.SuccessResponse
+// @Success 204 {object} dto.SuccessResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -87,14 +88,15 @@ func (h *ClientHandler) DeleteClient(c *gin.Context) {
 		return
 	}
 
-	if err := h.clientService.RemoveClient(id); err != nil {
+	ctx := c.Request.Context()
+	if err := h.clientService.RemoveClient(ctx, id); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse{
+	c.JSON(http.StatusNoContent, dto.SuccessResponse{
 		Status: "deleted",
 	})
 }
@@ -121,7 +123,8 @@ func (h *ClientHandler) GetClientsWithParams(c *gin.Context) {
 		return
 	}
 
-	clients, limit, offset, err := h.clientService.GetClientsWithParams(&req.Name, &req.Surname, req.Limit, req.Offset)
+	ctx := c.Request.Context()
+	clients, limit, offset, err := h.clientService.GetClientsWithParams(ctx, &req.Name, &req.Surname, req.Limit, req.Offset)
 	if err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
@@ -134,7 +137,7 @@ func (h *ClientHandler) GetClientsWithParams(c *gin.Context) {
 	clientsResponse.Offset = offset
 
 	for i, client := range clients {
-		address, err := h.addressService.GetAddress(client.AddressID)
+		address, err := h.addressService.GetAddress(ctx, client.AddressID)
 		if err != nil {
 			c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 				Error: err.Error(),
@@ -183,7 +186,8 @@ func (h *ClientHandler) ChangeClientAddress(c *gin.Context) {
 
 	address := mapper.AddressDTOtoDAO(req)
 
-	if err := h.clientService.ChangeClientAddress(clientID, address); err != nil {
+	ctx := c.Request.Context()
+	if err := h.clientService.ChangeClientAddress(ctx, clientID, address); err != nil {
 		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
 			Error: err.Error(),
 		})
