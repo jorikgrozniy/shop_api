@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
@@ -19,19 +21,25 @@ func NewImageService(imageRepo repository.ImageRepository) *ImageService {
 }
 
 func (s *ImageService) AddImage(ctx context.Context, image *entity.Image) (uuid.UUID, error) {
+	if image == nil {
+		return uuid.Nil, fmt.Errorf("add image: %w", ErrNilEntity)
+	}
+
 	id, err := s.imageRepo.Save(ctx, image)
 	if err != nil {
-		return uuid.Nil, ErrServerInternal
+		return uuid.Nil, fmt.Errorf("%w: %w", ErrServerInternal, err)
 	}
 
 	return id, nil
 }
 
 func (s *ImageService) ChangeImage(ctx context.Context, id uuid.UUID, newImage []byte) error {
-	if err := s.imageRepo.Update(ctx, id, newImage); err == repository.ErrNoRows {
-		return ErrImageNotFound
-	} else if err != nil {
-		return ErrServerInternal
+	err := s.imageRepo.Update(ctx, id, newImage)
+	if err != nil {
+		if errors.Is(err, repository.ErrNoRows) {
+			return fmt.Errorf("change image %s: %w", id, ErrImageNotFound)
+		}
+		return fmt.Errorf("%w: %w", ErrServerInternal, err)
 	}
 
 	return nil
@@ -40,27 +48,25 @@ func (s *ImageService) ChangeImage(ctx context.Context, id uuid.UUID, newImage [
 func (s *ImageService) RemoveImage(ctx context.Context, id uuid.UUID) error {
 	err := s.imageRepo.RemoveByID(ctx, id)
 
-	switch err {
-	case repository.ErrNoRows:
-		return ErrImageNotFound
-	case repository.ErrDependentEntity:
-		return ErrDependentEntity
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, repository.ErrNoRows):
+		return fmt.Errorf("remove image %s: %w", id, ErrImageNotFound)
+	case errors.Is(err, repository.ErrDependentEntity):
+		return fmt.Errorf("remove image %s: %w", id, ErrDependentEntity)
+	default:
+		return fmt.Errorf("%w: %w", ErrServerInternal, err)
 	}
-
-	if err != nil {
-		return ErrServerInternal
-	}
-
-	return nil
 }
 
 func (s *ImageService) GetImage(ctx context.Context, id uuid.UUID) (*entity.Image, error) {
 	image, err := s.imageRepo.GetByID(ctx, id)
-
-	if err == repository.ErrNoRows {
-		return nil, ErrImageNotFound
-	} else if err != nil {
-		return nil, ErrServerInternal
+	if err != nil {
+		if errors.Is(err, repository.ErrNoRows) {
+			return nil, fmt.Errorf("get image %s: %w", id, ErrImageNotFound)
+		}
+		return nil, fmt.Errorf("%w: %w", ErrServerInternal, err)
 	}
 
 	return image, nil

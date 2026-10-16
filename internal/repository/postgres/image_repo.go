@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"shop_api/pkg/postgres"
@@ -21,7 +23,7 @@ func NewImageRepoPostgres(pg *postgres.Postgres) repository.ImageRepository {
 
 func (r *imageRepoPostgres) Save(ctx context.Context, image *entity.Image) (uuid.UUID, error) {
 	if image == nil {
-		return uuid.Nil, repository.ErrNilEntity
+		return uuid.Nil, fmt.Errorf("save image: %w", repository.ErrNilEntity)
 	}
 
 	query := `
@@ -33,10 +35,10 @@ func (r *imageRepoPostgres) Save(ctx context.Context, image *entity.Image) (uuid
 	var id uuid.UUID
 	err := r.pg.Pool.QueryRow(ctx, query, image.Image).Scan(&id)
 
-	if err == postgres.ErrNoRows {
-		return uuid.Nil, repository.ErrNoRows
+	if errors.Is(err, postgres.ErrNoRows) {
+		return uuid.Nil, fmt.Errorf("save image: %w", repository.ErrNoRows)
 	} else if err != nil {
-		return uuid.Nil, repository.ErrQueryExec
+		return uuid.Nil, fmt.Errorf("save image: %w: %w", repository.ErrQueryExec, err)
 	}
 
 	return id, nil
@@ -51,13 +53,13 @@ func (r *imageRepoPostgres) RemoveByID(ctx context.Context, id uuid.UUID) error 
 	cmdTag, err := r.pg.Pool.Exec(ctx, query, id)
 
 	if isFKViolation(err) {
-		return repository.ErrDependentEntity
+		return fmt.Errorf("remove image %s: %w: %w", id, repository.ErrDependentEntity, err)
 	} else if err != nil {
-		return repository.ErrQueryExec
+		return fmt.Errorf("remove image %s: %w: %w", id, repository.ErrQueryExec, err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return repository.ErrNoRows
+		return fmt.Errorf("remove image %s: %w", id, repository.ErrNoRows)
 	}
 
 	return nil
@@ -73,10 +75,10 @@ func (r *imageRepoPostgres) GetByID(ctx context.Context, id uuid.UUID) (*entity.
 
 	err := r.pg.Pool.QueryRow(ctx, query, id).Scan(&image.Image)
 
-	if err == postgres.ErrNoRows {
-		return nil, repository.ErrNoRows
+	if errors.Is(err, postgres.ErrNoRows) {
+		return nil, fmt.Errorf("get image %s: %w", id, repository.ErrNoRows)
 	} else if err != nil {
-		return nil, repository.ErrQueryExec
+		return nil, fmt.Errorf("get image %s: %w: %w", id, repository.ErrQueryExec, err)
 	}
 
 	return &image, nil
@@ -92,11 +94,11 @@ func (r *imageRepoPostgres) Update(ctx context.Context, id uuid.UUID, newImage [
 	cmdTag, err := r.pg.Pool.Exec(ctx, query, id, newImage)
 
 	if err != nil {
-		return repository.ErrQueryExec
+		return fmt.Errorf("update image %s: %w: %w", id, repository.ErrQueryExec, err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return repository.ErrNoRows
+		return fmt.Errorf("update image %s: %w", id, repository.ErrNoRows)
 	}
 
 	return nil

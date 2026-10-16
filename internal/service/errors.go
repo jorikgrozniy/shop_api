@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrServerInternal    = errors.New("internal server error")
+	ErrNilEntity         = errors.New("entity is nil")
 	ErrInvalidNameLength = errors.New("name must be 1 to 100 long")
 	ErrDependentEntity   = errors.New("entity is dependent")
 
@@ -28,6 +29,7 @@ var (
 	ErrInvalidPrice          = errors.New("price must not be negative")
 	ErrInvalidAvailableStock = errors.New("available stock must be positive")
 	ErrInvalidAmount         = errors.New("amount must be positive")
+	ErrInvalidSupplierID     = errors.New("supplier id is required")
 	ErrProductNotFound       = errors.New("product not found")
 
 	// image service

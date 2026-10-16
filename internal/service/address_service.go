@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 
@@ -19,24 +21,29 @@ func NewAddressService(addressRepo repository.AddressRepository) *AddressService
 }
 
 func (s *AddressService) MustGetAddressID(ctx context.Context, address *entity.Address) (uuid.UUID, error) {
-	if id, found := s.findAddress(ctx, address); found {
+	if address == nil {
+		return uuid.Nil, fmt.Errorf("resolve address: %w", ErrNilEntity)
+	}
+
+	id, found, err := s.findAddress(ctx, address)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	if found {
 		return id, nil
 	}
 
-	if id, err := s.addAddress(ctx, address); err != nil {
-		return uuid.Nil, err
-	} else {
-		return id, nil
-	}
+	return s.addAddress(ctx, address)
 }
 
 func (s *AddressService) GetAddress(ctx context.Context, id uuid.UUID) (*entity.Address, error) {
 	address, err := s.addressRepo.GetByID(ctx, id)
-
-	if err == repository.ErrNoRows {
-		return nil, ErrAddressNotFound
-	} else if err != nil {
-		return nil, ErrServerInternal
+	if err != nil {
+		if errors.Is(err, repository.ErrNoRows) {
+			return nil, fmt.Errorf("get address %s: %w", id, ErrAddressNotFound)
+		}
+		return nil, fmt.Errorf("%w: %w", ErrServerInternal, err)
 	}
 
 	return address, nil
@@ -57,16 +64,21 @@ func (s *AddressService) addAddress(ctx context.Context, address *entity.Address
 
 	id, err := s.addressRepo.Save(ctx, address)
 	if err != nil {
-		return uuid.Nil, ErrServerInternal
+		return uuid.Nil, fmt.Errorf("%w: %w", ErrServerInternal, err)
 	}
 
 	return id, nil
 }
 
-func (s *AddressService) findAddress(ctx context.Context, address *entity.Address) (uuid.UUID, bool) {
-	if id, err := s.addressRepo.Find(ctx, address); err != nil {
-		return uuid.Nil, false
-	} else {
-		return id, true
+func (s *AddressService) findAddress(ctx context.Context, address *entity.Address) (uuid.UUID, bool, error) {
+	id, err := s.addressRepo.Find(ctx, address)
+	if err == nil {
+		return id, true, nil
 	}
+
+	if errors.Is(err, repository.ErrNoRows) {
+		return uuid.Nil, false, nil
+	}
+
+	return uuid.Nil, false, fmt.Errorf("%w: %w", ErrServerInternal, err)
 }

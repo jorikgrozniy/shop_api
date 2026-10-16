@@ -64,9 +64,7 @@ func (h *ImageHandler) ChangeImage(c *gin.Context) {
 	image := mapper.ImageDTOtoDAO(req)
 	ctx := c.Request.Context()
 	if err := h.imageService.ChangeImage(ctx, id, image.Image); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -99,9 +97,7 @@ func (h *ImageHandler) DeleteImage(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.imageService.RemoveImage(ctx, id); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -135,9 +131,7 @@ func (h *ImageHandler) GetImage(c *gin.Context) {
 	ctx := c.Request.Context()
 	image, err := h.imageService.GetImage(ctx, id)
 	if err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 

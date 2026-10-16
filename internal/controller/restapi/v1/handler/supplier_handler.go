@@ -48,9 +48,7 @@ func (h *SupplierHandler) AddSupplier(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.supplierService.AddSupplier(ctx, supplier, address); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -83,9 +81,7 @@ func (h *SupplierHandler) DeleteSupplier(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.supplierService.RemoveSupplier(ctx, id); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -119,17 +115,13 @@ func (h *SupplierHandler) GetSupplier(c *gin.Context) {
 	ctx := c.Request.Context()
 	supplier, err := h.supplierService.GetSupplier(ctx, id)
 	if err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
 	address, err := h.addressService.GetAddress(ctx, supplier.AddressID)
 	if err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -163,9 +155,7 @@ func (h *SupplierHandler) GetSuppliersWithParams(c *gin.Context) {
 	ctx := c.Request.Context()
 	suppliers, limit, offset, err := h.supplierService.GetSuppliersWithParams(ctx, req.Limit, req.Offset)
 	if err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -176,9 +166,7 @@ func (h *SupplierHandler) GetSuppliersWithParams(c *gin.Context) {
 	for i, supplier := range suppliers {
 		address, err := h.addressService.GetAddress(ctx, supplier.AddressID)
 		if err != nil {
-			c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-				Error: err.Error(),
-			})
+			respondServiceError(c, err)
 			return
 		}
 
@@ -225,9 +213,7 @@ func (h *SupplierHandler) ChangeSupplierAddress(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.supplierService.ChangeSupplierAddress(ctx, supplierID, address); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 

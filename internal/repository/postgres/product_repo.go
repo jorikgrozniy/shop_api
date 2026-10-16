@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"shop_api/pkg/postgres"
@@ -21,7 +23,7 @@ func NewProductRepoPostgres(pg *postgres.Postgres) repository.ProductRepository 
 
 func (r *productRepoPostgres) Save(ctx context.Context, product *entity.Product) error {
 	if product == nil {
-		return repository.ErrNilEntity
+		return fmt.Errorf("save product: %w", repository.ErrNilEntity)
 	}
 
 	query := `
@@ -39,7 +41,7 @@ func (r *productRepoPostgres) Save(ctx context.Context, product *entity.Product)
 	)
 
 	if err != nil {
-		return repository.ErrQueryExec
+		return fmt.Errorf("save product: %w: %w", repository.ErrQueryExec, err)
 	}
 
 	return nil
@@ -55,11 +57,11 @@ func (r *productRepoPostgres) UpdateAvailableStock(ctx context.Context, id uuid.
 	cmdTag, err := r.pg.Pool.Exec(ctx, query, id, value)
 
 	if err != nil {
-		return repository.ErrQueryExec
+		return fmt.Errorf("update stock of product %s: %w: %w", id, repository.ErrQueryExec, err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return repository.ErrNoRows
+		return fmt.Errorf("update stock of product %s: %w", id, repository.ErrNoRows)
 	}
 
 	return nil
@@ -75,11 +77,11 @@ func (r *productRepoPostgres) UpdateImage(ctx context.Context, productID, imageI
 	cmdTag, err := r.pg.Pool.Exec(ctx, query, productID, imageID)
 
 	if err != nil {
-		return repository.ErrQueryExec
+		return fmt.Errorf("update image of product %s: %w: %w", productID, repository.ErrQueryExec, err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return repository.ErrNoRows
+		return fmt.Errorf("update image of product %s: %w", productID, repository.ErrNoRows)
 	}
 
 	return nil
@@ -100,10 +102,10 @@ func (r *productRepoPostgres) GetByID(ctx context.Context, id uuid.UUID) (*entit
 		&product.LastUpdate, &product.SupplierID, &product.ImageID,
 	)
 
-	if err == postgres.ErrNoRows {
-		return nil, repository.ErrNoRows
+	if errors.Is(err, postgres.ErrNoRows) {
+		return nil, fmt.Errorf("get product %s: %w", id, repository.ErrNoRows)
 	} else if err != nil {
-		return nil, repository.ErrQueryExec
+		return nil, fmt.Errorf("get product %s: %w: %w", id, repository.ErrQueryExec, err)
 	}
 
 	return &product, nil
@@ -121,7 +123,7 @@ func (r *productRepoPostgres) GetWithParams(ctx context.Context, limit, offset i
 
 	rows, err := r.pg.Pool.Query(ctx, query, limit, offset)
 	if err != nil {
-		return nil, repository.ErrQueryExec
+		return nil, fmt.Errorf("list products: %w: %w", repository.ErrQueryExec, err)
 	}
 	defer rows.Close()
 
@@ -133,9 +135,13 @@ func (r *productRepoPostgres) GetWithParams(ctx context.Context, limit, offset i
 			&product.LastUpdate, &product.SupplierID, &product.ImageID,
 		)
 		if err != nil {
-			return nil, repository.ErrRowScan
+			return nil, fmt.Errorf("list products: %w: %w", repository.ErrRowScan, err)
 		}
 		products = append(products, &product)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list products: %w: %w", repository.ErrQueryExec, err)
 	}
 
 	return products, nil
@@ -150,13 +156,13 @@ func (r *productRepoPostgres) RemoveByID(ctx context.Context, id uuid.UUID) erro
 	cmdTag, err := r.pg.Pool.Exec(ctx, query, id)
 
 	if isFKViolation(err) {
-		return repository.ErrDependentEntity
+		return fmt.Errorf("remove product %s: %w: %w", id, repository.ErrDependentEntity, err)
 	} else if err != nil {
-		return repository.ErrQueryExec
+		return fmt.Errorf("remove product %s: %w: %w", id, repository.ErrQueryExec, err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return repository.ErrNoRows
+		return fmt.Errorf("remove product %s: %w", id, repository.ErrNoRows)
 	}
 
 	return nil
