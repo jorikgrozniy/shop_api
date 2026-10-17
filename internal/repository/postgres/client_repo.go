@@ -20,7 +20,7 @@ func NewClientRepoPostgres(pg *postgres.Postgres) repository.ClientRepository {
 	}
 }
 
-func (r *clientRepoPostgres) Save(ctx context.Context, client *entity.Client) error {
+func (r *clientRepoPostgres) Save(ctx context.Context, q postgres.Querier, client *entity.Client) error {
 	if client == nil {
 		return fmt.Errorf("save client: %w", repository.ErrNilEntity)
 	}
@@ -33,7 +33,7 @@ func (r *clientRepoPostgres) Save(ctx context.Context, client *entity.Client) er
 		)
 	`
 
-	_, err := r.pg.Pool.Exec(ctx, query,
+	_, err := q.Exec(ctx, query,
 		client.Name, client.Surname,
 		client.Birthdate, client.Gender, client.AddressID,
 	)
@@ -106,14 +106,14 @@ func (r *clientRepoPostgres) GetWithParams(
 	return clients, nil
 }
 
-func (r *clientRepoPostgres) UpdateAddress(ctx context.Context, clientID, addressID uuid.UUID) error {
+func (r *clientRepoPostgres) UpdateAddress(ctx context.Context, q postgres.Querier, clientID, addressID uuid.UUID) error {
 	query := `
 		UPDATE clients
 		SET address_id = $2
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(ctx, query, clientID, addressID)
+	cmdTag, err := q.Exec(ctx, query, clientID, addressID)
 
 	if err != nil {
 		return fmt.Errorf("update address of client %s: %w: %w", clientID, repository.ErrQueryExec, err)

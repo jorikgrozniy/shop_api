@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
+	"shop_api/pkg/postgres"
 
 	"github.com/google/uuid"
 )
@@ -13,13 +14,15 @@ import (
 type SupplierService struct {
 	supplierRepo   repository.SupplierRepository
 	addressService *AddressService
+	txManager      TxManager
 }
 
 func NewSupplierService(supplierRepo repository.SupplierRepository,
-	addressService *AddressService) *SupplierService {
+	addressService *AddressService, txManager TxManager) *SupplierService {
 	return &SupplierService{
 		supplierRepo:   supplierRepo,
 		addressService: addressService,
+		txManager:      txManager,
 	}
 }
 
@@ -36,17 +39,19 @@ func (s *SupplierService) AddSupplier(ctx context.Context, supplier *entity.Supp
 		return ErrInvalidPhoneLength
 	}
 
-	addressID, err := s.addressService.MustGetAddressID(ctx, address)
-	if err != nil {
-		return fmt.Errorf("add supplier: %w", err)
-	}
-	supplier.AddressID = addressID
+	return s.txManager.WithTx(ctx, func(q postgres.Querier) error {
+		addressID, err := s.addressService.MustGetAddressID(ctx, q, address)
+		if err != nil {
+			return fmt.Errorf("add supplier: %w", err)
+		}
+		supplier.AddressID = addressID
 
-	if err := s.supplierRepo.Save(ctx, supplier); err != nil {
-		return fmt.Errorf("%w: %w", ErrServerInternal, err)
-	}
+		if err := s.supplierRepo.Save(ctx, q, supplier); err != nil {
+			return fmt.Errorf("%w: %w", ErrServerInternal, err)
+		}
 
-	return nil
+		return nil
+	})
 }
 
 func (s *SupplierService) GetSupplier(ctx context.Context, id uuid.UUID) (*entity.Supplier, error) {
@@ -94,18 +99,20 @@ func (s *SupplierService) GetSuppliersWithParams(ctx context.Context, limit, off
 }
 
 func (s *SupplierService) ChangeSupplierAddress(ctx context.Context, supplierID uuid.UUID, newAddress *entity.Address) error {
-	addressID, err := s.addressService.MustGetAddressID(ctx, newAddress)
-	if err != nil {
-		return fmt.Errorf("change address of supplier %s: %w", supplierID, err)
-	}
-
-	err = s.supplierRepo.UpdateAddress(ctx, supplierID, addressID)
-	if err != nil {
-		if errors.Is(err, repository.ErrNoRows) {
-			return fmt.Errorf("change address of supplier %s: %w", supplierID, ErrSupplierNotFound)
+	return s.txManager.WithTx(ctx, func(q postgres.Querier) error {
+		addressID, err := s.addressService.MustGetAddressID(ctx, q, newAddress)
+		if err != nil {
+			return fmt.Errorf("change address of supplier %s: %w", supplierID, err)
 		}
-		return fmt.Errorf("%w: %w", ErrServerInternal, err)
-	}
 
-	return nil
+		err = s.supplierRepo.UpdateAddress(ctx, q, supplierID, addressID)
+		if err != nil {
+			if errors.Is(err, repository.ErrNoRows) {
+				return fmt.Errorf("change address of supplier %s: %w", supplierID, ErrSupplierNotFound)
+			}
+			return fmt.Errorf("%w: %w", ErrServerInternal, err)
+		}
+
+		return nil
+	})
 }

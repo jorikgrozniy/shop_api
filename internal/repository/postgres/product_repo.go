@@ -21,7 +21,7 @@ func NewProductRepoPostgres(pg *postgres.Postgres) repository.ProductRepository 
 	}
 }
 
-func (r *productRepoPostgres) Save(ctx context.Context, product *entity.Product) error {
+func (r *productRepoPostgres) Save(ctx context.Context, q postgres.Querier, product *entity.Product) error {
 	if product == nil {
 		return fmt.Errorf("save product: %w", repository.ErrNilEntity)
 	}
@@ -35,7 +35,7 @@ func (r *productRepoPostgres) Save(ctx context.Context, product *entity.Product)
 		)
 	`
 
-	_, err := r.pg.Pool.Exec(ctx, query,
+	_, err := q.Exec(ctx, query,
 		product.Name, product.Category, product.Price, product.AvailableStock,
 		product.LastUpdate, product.SupplierID, product.ImageID,
 	)
@@ -56,7 +56,9 @@ func (r *productRepoPostgres) UpdateAvailableStock(ctx context.Context, id uuid.
 
 	cmdTag, err := r.pg.Pool.Exec(ctx, query, id, value)
 
-	if err != nil {
+	if isCheckViolation(err) {
+		return fmt.Errorf("update stock of product %s: %w: %w", id, repository.ErrInsufficientStock, err)
+	} else if err != nil {
 		return fmt.Errorf("update stock of product %s: %w: %w", id, repository.ErrQueryExec, err)
 	}
 
@@ -67,14 +69,14 @@ func (r *productRepoPostgres) UpdateAvailableStock(ctx context.Context, id uuid.
 	return nil
 }
 
-func (r *productRepoPostgres) UpdateImage(ctx context.Context, productID, imageID uuid.UUID) error {
+func (r *productRepoPostgres) UpdateImage(ctx context.Context, q postgres.Querier, productID, imageID uuid.UUID) error {
 	query := `
 		UPDATE products
 		SET image_id = $2
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(ctx, query, productID, imageID)
+	cmdTag, err := q.Exec(ctx, query, productID, imageID)
 
 	if err != nil {
 		return fmt.Errorf("update image of product %s: %w: %w", productID, repository.ErrQueryExec, err)

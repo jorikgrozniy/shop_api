@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
+	"shop_api/pkg/postgres"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,13 +15,15 @@ import (
 type ClientService struct {
 	clientRepo     repository.ClientRepository
 	addressService *AddressService
+	txManager      TxManager
 }
 
 func NewClientService(clientRepo repository.ClientRepository,
-	addressService *AddressService) *ClientService {
+	addressService *AddressService, txManager TxManager) *ClientService {
 	return &ClientService{
 		clientRepo:     clientRepo,
 		addressService: addressService,
+		txManager:      txManager,
 	}
 }
 
@@ -46,17 +49,19 @@ func (s *ClientService) AddClient(ctx context.Context, client *entity.Client, ad
 		return ErrInvalidGender
 	}
 
-	addressID, err := s.addressService.MustGetAddressID(ctx, address)
-	if err != nil {
-		return fmt.Errorf("add client: %w", err)
-	}
-	client.AddressID = addressID
+	return s.txManager.WithTx(ctx, func(q postgres.Querier) error {
+		addressID, err := s.addressService.MustGetAddressID(ctx, q, address)
+		if err != nil {
+			return fmt.Errorf("add client: %w", err)
+		}
+		client.AddressID = addressID
 
-	if err := s.clientRepo.Save(ctx, client); err != nil {
-		return fmt.Errorf("%w: %w", ErrServerInternal, err)
-	}
+		if err := s.clientRepo.Save(ctx, q, client); err != nil {
+			return fmt.Errorf("%w: %w", ErrServerInternal, err)
+		}
 
-	return nil
+		return nil
+	})
 }
 
 func (s *ClientService) RemoveClient(ctx context.Context, clientID uuid.UUID) error {
@@ -101,18 +106,20 @@ func (s *ClientService) GetClientsWithParams(
 }
 
 func (s *ClientService) ChangeClientAddress(ctx context.Context, clientID uuid.UUID, newAddress *entity.Address) error {
-	addressID, err := s.addressService.MustGetAddressID(ctx, newAddress)
-	if err != nil {
-		return fmt.Errorf("change address of client %s: %w", clientID, err)
-	}
-
-	err = s.clientRepo.UpdateAddress(ctx, clientID, addressID)
-	if err != nil {
-		if errors.Is(err, repository.ErrNoRows) {
-			return fmt.Errorf("change address of client %s: %w", clientID, ErrClientNotFound)
+	return s.txManager.WithTx(ctx, func(q postgres.Querier) error {
+		addressID, err := s.addressService.MustGetAddressID(ctx, q, newAddress)
+		if err != nil {
+			return fmt.Errorf("change address of client %s: %w", clientID, err)
 		}
-		return fmt.Errorf("%w: %w", ErrServerInternal, err)
-	}
 
-	return nil
+		err = s.clientRepo.UpdateAddress(ctx, q, clientID, addressID)
+		if err != nil {
+			if errors.Is(err, repository.ErrNoRows) {
+				return fmt.Errorf("change address of client %s: %w", clientID, ErrClientNotFound)
+			}
+			return fmt.Errorf("%w: %w", ErrServerInternal, err)
+		}
+
+		return nil
+	})
 }

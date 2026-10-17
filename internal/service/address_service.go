@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
+	"shop_api/pkg/postgres"
 
 	"github.com/google/uuid"
 )
@@ -20,12 +21,12 @@ func NewAddressService(addressRepo repository.AddressRepository) *AddressService
 	}
 }
 
-func (s *AddressService) MustGetAddressID(ctx context.Context, address *entity.Address) (uuid.UUID, error) {
+func (s *AddressService) MustGetAddressID(ctx context.Context, q postgres.Querier, address *entity.Address) (uuid.UUID, error) {
 	if address == nil {
 		return uuid.Nil, fmt.Errorf("resolve address: %w", ErrNilEntity)
 	}
 
-	id, found, err := s.findAddress(ctx, address)
+	id, found, err := s.findAddress(ctx, q, address)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -34,7 +35,7 @@ func (s *AddressService) MustGetAddressID(ctx context.Context, address *entity.A
 		return id, nil
 	}
 
-	return s.addAddress(ctx, address)
+	return s.addAddress(ctx, q, address)
 }
 
 func (s *AddressService) GetAddress(ctx context.Context, id uuid.UUID) (*entity.Address, error) {
@@ -49,7 +50,7 @@ func (s *AddressService) GetAddress(ctx context.Context, id uuid.UUID) (*entity.
 	return address, nil
 }
 
-func (s *AddressService) addAddress(ctx context.Context, address *entity.Address) (uuid.UUID, error) {
+func (s *AddressService) addAddress(ctx context.Context, q postgres.Querier, address *entity.Address) (uuid.UUID, error) {
 	if len(address.Country) == 0 || len(address.Country) > 100 {
 		return uuid.Nil, ErrInvalidCountryLength
 	}
@@ -62,7 +63,7 @@ func (s *AddressService) addAddress(ctx context.Context, address *entity.Address
 		return uuid.Nil, ErrInvalidStreetLength
 	}
 
-	id, err := s.addressRepo.Save(ctx, address)
+	id, err := s.addressRepo.Save(ctx, q, address)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("%w: %w", ErrServerInternal, err)
 	}
@@ -70,8 +71,8 @@ func (s *AddressService) addAddress(ctx context.Context, address *entity.Address
 	return id, nil
 }
 
-func (s *AddressService) findAddress(ctx context.Context, address *entity.Address) (uuid.UUID, bool, error) {
-	id, err := s.addressRepo.Find(ctx, address)
+func (s *AddressService) findAddress(ctx context.Context, q postgres.Querier, address *entity.Address) (uuid.UUID, bool, error) {
+	id, err := s.addressRepo.Find(ctx, q, address)
 	if err == nil {
 		return id, true, nil
 	}

@@ -21,7 +21,7 @@ func NewImageRepoPostgres(pg *postgres.Postgres) repository.ImageRepository {
 	}
 }
 
-func (r *imageRepoPostgres) Save(ctx context.Context, image *entity.Image) (uuid.UUID, error) {
+func (r *imageRepoPostgres) Save(ctx context.Context, q postgres.Querier, image *entity.Image) (uuid.UUID, error) {
 	if image == nil {
 		return uuid.Nil, fmt.Errorf("save image: %w", repository.ErrNilEntity)
 	}
@@ -33,7 +33,7 @@ func (r *imageRepoPostgres) Save(ctx context.Context, image *entity.Image) (uuid
 	`
 
 	var id uuid.UUID
-	err := r.pg.Pool.QueryRow(ctx, query, image.Image).Scan(&id)
+	err := q.QueryRow(ctx, query, image.Image).Scan(&id)
 
 	if errors.Is(err, postgres.ErrNoRows) {
 		return uuid.Nil, fmt.Errorf("save image: %w", repository.ErrNoRows)

@@ -21,7 +21,7 @@ func NewAddressRepoPostgres(pg *postgres.Postgres) repository.AddressRepository 
 	}
 }
 
-func (r *addressRepoPostgres) Save(ctx context.Context, address *entity.Address) (uuid.UUID, error) {
+func (r *addressRepoPostgres) Save(ctx context.Context, q postgres.Querier, address *entity.Address) (uuid.UUID, error) {
 	if address == nil {
 		return uuid.Nil, fmt.Errorf("save address: %w", repository.ErrNilEntity)
 	}
@@ -32,11 +32,13 @@ func (r *addressRepoPostgres) Save(ctx context.Context, address *entity.Address)
 		) VALUES (
 			$1, $2, $3
 		)
+		ON CONFLICT (country, city, street)
+		DO UPDATE SET country = addresses.country
 		RETURNING id
 	`
 
 	var id uuid.UUID
-	err := r.pg.Pool.QueryRow(ctx, query,
+	err := q.QueryRow(ctx, query,
 		address.Country, address.City, address.Street).Scan(&id)
 
 	if errors.Is(err, postgres.ErrNoRows) {
@@ -48,7 +50,7 @@ func (r *addressRepoPostgres) Save(ctx context.Context, address *entity.Address)
 	return id, nil
 }
 
-func (r *addressRepoPostgres) Find(ctx context.Context, address *entity.Address) (uuid.UUID, error) {
+func (r *addressRepoPostgres) Find(ctx context.Context, q postgres.Querier, address *entity.Address) (uuid.UUID, error) {
 	if address == nil {
 		return uuid.Nil, fmt.Errorf("find address: %w", repository.ErrNilEntity)
 	}
@@ -60,7 +62,7 @@ func (r *addressRepoPostgres) Find(ctx context.Context, address *entity.Address)
 	`
 
 	var id uuid.UUID
-	err := r.pg.Pool.QueryRow(ctx, query,
+	err := q.QueryRow(ctx, query,
 		address.Country, address.City, address.Street).Scan(&id)
 
 	if errors.Is(err, postgres.ErrNoRows) {

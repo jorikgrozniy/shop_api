@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
+	"shop_api/pkg/postgres"
 
 	"github.com/google/uuid"
 )
@@ -14,14 +15,16 @@ type ProductService struct {
 	productRepo     repository.ProductRepository
 	supplierService *SupplierService
 	imageService    *ImageService
+	txManager       TxManager
 }
 
 func NewProductService(productRepo repository.ProductRepository,
-	supplierService *SupplierService, imageService *ImageService) *ProductService {
+	supplierService *SupplierService, imageService *ImageService, txManager TxManager) *ProductService {
 	return &ProductService{
 		productRepo:     productRepo,
 		supplierService: supplierService,
 		imageService:    imageService,
+		txManager:       txManager,
 	}
 }
 
@@ -54,37 +57,41 @@ func (s *ProductService) AddProduct(ctx context.Context, product *entity.Product
 		return fmt.Errorf("add product: %w", err)
 	}
 
-	if image != nil {
-		imageID, err := s.imageService.AddImage(ctx, image)
-		if err != nil {
-			return fmt.Errorf("add product: %w", err)
+	return s.txManager.WithTx(ctx, func(q postgres.Querier) error {
+		if image != nil {
+			imageID, err := s.imageService.AddImage(ctx, q, image)
+			if err != nil {
+				return fmt.Errorf("add product: %w", err)
+			}
+
+			product.ImageID = &imageID
 		}
 
-		product.ImageID = &imageID
-	}
+		if err := s.productRepo.Save(ctx, q, product); err != nil {
+			return fmt.Errorf("%w: %w", ErrServerInternal, err)
+		}
 
-	if err := s.productRepo.Save(ctx, product); err != nil {
-		return fmt.Errorf("%w: %w", ErrServerInternal, err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func (s *ProductService) AddProductImage(ctx context.Context, productID uuid.UUID, image *entity.Image) error {
-	imageID, err := s.imageService.AddImage(ctx, image)
-	if err != nil {
-		return fmt.Errorf("add image to product %s: %w", productID, err)
-	}
-
-	err = s.productRepo.UpdateImage(ctx, productID, imageID)
-	if err != nil {
-		if errors.Is(err, repository.ErrNoRows) {
-			return fmt.Errorf("add image to product %s: %w", productID, ErrProductNotFound)
+	return s.txManager.WithTx(ctx, func(q postgres.Querier) error {
+		imageID, err := s.imageService.AddImage(ctx, q, image)
+		if err != nil {
+			return fmt.Errorf("add image to product %s: %w", productID, err)
 		}
-		return fmt.Errorf("%w: %w", ErrServerInternal, err)
-	}
 
-	return nil
+		err = s.productRepo.UpdateImage(ctx, q, productID, imageID)
+		if err != nil {
+			if errors.Is(err, repository.ErrNoRows) {
+				return fmt.Errorf("add image to product %s: %w", productID, ErrProductNotFound)
+			}
+			return fmt.Errorf("%w: %w", ErrServerInternal, err)
+		}
+
+		return nil
+	})
 }
 
 func (s *ProductService) GetProductImage(ctx context.Context, productID uuid.UUID) (*entity.Image, error) {
@@ -129,6 +136,9 @@ func (s *ProductService) DecreaseAvailableStock(ctx context.Context, productID u
 	if err != nil {
 		if errors.Is(err, repository.ErrNoRows) {
 			return fmt.Errorf("decrease stock of product %s: %w", productID, ErrProductNotFound)
+		}
+		if errors.Is(err, repository.ErrInsufficientStock) {
+			return fmt.Errorf("decrease stock of product %s: %w", productID, ErrInsufficientStock)
 		}
 		return fmt.Errorf("%w: %w", ErrServerInternal, err)
 	}

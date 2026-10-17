@@ -30,6 +30,7 @@ func getServiceErrorCode(err error) int {
 		errors.Is(err, service.ErrInvalidPrice),
 		errors.Is(err, service.ErrInvalidAvailableStock),
 		errors.Is(err, service.ErrInvalidAmount),
+		errors.Is(err, service.ErrInsufficientStock),
 		errors.Is(err, service.ErrInvalidSupplierID):
 		return http.StatusBadRequest
 

@@ -31,6 +31,7 @@ var (
 	ErrInvalidAmount         = errors.New("amount must be positive")
 	ErrInvalidSupplierID     = errors.New("supplier id is required")
 	ErrProductNotFound       = errors.New("product not found")
+	ErrInsufficientStock     = errors.New("insufficient stock")
 
 	// image service
 	ErrImageNotFound = errors.New("image not found")

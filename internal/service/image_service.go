@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
+	"shop_api/pkg/postgres"
 
 	"github.com/google/uuid"
 )
@@ -20,12 +21,12 @@ func NewImageService(imageRepo repository.ImageRepository) *ImageService {
 	}
 }
 
-func (s *ImageService) AddImage(ctx context.Context, image *entity.Image) (uuid.UUID, error) {
+func (s *ImageService) AddImage(ctx context.Context, q postgres.Querier, image *entity.Image) (uuid.UUID, error) {
 	if image == nil {
 		return uuid.Nil, fmt.Errorf("add image: %w", ErrNilEntity)
 	}
 
-	id, err := s.imageRepo.Save(ctx, image)
+	id, err := s.imageRepo.Save(ctx, q, image)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("%w: %w", ErrServerInternal, err)
 	}

@@ -21,7 +21,7 @@ func NewSupplierRepoPostgres(pg *postgres.Postgres) repository.SupplierRepositor
 	}
 }
 
-func (r *supplierRepoPostgres) Save(ctx context.Context, supplier *entity.Supplier) error {
+func (r *supplierRepoPostgres) Save(ctx context.Context, q postgres.Querier, supplier *entity.Supplier) error {
 	if supplier == nil {
 		return fmt.Errorf("save supplier: %w", repository.ErrNilEntity)
 	}
@@ -34,7 +34,7 @@ func (r *supplierRepoPostgres) Save(ctx context.Context, supplier *entity.Suppli
 		)
 	`
 
-	_, err := r.pg.Pool.Exec(ctx, query,
+	_, err := q.Exec(ctx, query,
 		supplier.Name, supplier.AddressID, supplier.PhoneNumber,
 	)
 
@@ -123,14 +123,14 @@ func (r *supplierRepoPostgres) GetWithParams(ctx context.Context, limit, offset 
 	return suppliers, nil
 }
 
-func (r *supplierRepoPostgres) UpdateAddress(ctx context.Context, supplierID, addressID uuid.UUID) error {
+func (r *supplierRepoPostgres) UpdateAddress(ctx context.Context, q postgres.Querier, supplierID, addressID uuid.UUID) error {
 	query := `
 		UPDATE suppliers
 		SET address_id = $2
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(ctx, query, supplierID, addressID)
+	cmdTag, err := q.Exec(ctx, query, supplierID, addressID)
 
 	if err != nil {
 		return fmt.Errorf("update address of supplier %s: %w: %w", supplierID, repository.ErrQueryExec, err)
