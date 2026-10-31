@@ -20,7 +20,8 @@ type DatabaseConfig struct {
 }
 
 func NewConfig() *Config {
-	godotenv.Load()
+	// .env is optional: Docker Compose injects the variables directly.
+	_ = godotenv.Load()
 
 	return &Config{
 		Server: ServerConfig{

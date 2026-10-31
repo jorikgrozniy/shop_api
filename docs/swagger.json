@@ -1,7 +1,4 @@
 {
-    "schemes": [
-        "https"
-    ],
     "swagger": "2.0",
     "info": {
         "description": "REST API for shop service",

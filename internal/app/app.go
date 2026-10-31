@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"shop_api/config"
 	"shop_api/internal/controller/restapi"
 	v1 "shop_api/internal/controller/restapi/v1"
@@ -14,18 +13,6 @@ import (
 	"go.uber.org/fx"
 )
 
-type txManager struct {
-	pg *pg.Postgres
-}
-
-func (m *txManager) WithTx(ctx context.Context, fn func(pg.Querier) error) error {
-	return m.pg.WithTx(ctx, fn)
-}
-
-func newTxManager(p *pg.Postgres) service.TxManager {
-	return &txManager{pg: p}
-}
-
 func New() *fx.App {
 	return fx.New(
 		fx.Provide(
@@ -35,7 +22,7 @@ func New() *fx.App {
 
 			pg.NewPostgres,
 
-			newTxManager,
+			service.NewTxManager,
 
 			postgres.NewAddressRepoPostgres,
 			postgres.NewClientRepoPostgres,

@@ -889,6 +889,4 @@ paths:
       summary: Change supplier address
       tags:
       - suppliers
-schemes:
-- https
 swagger: "2.0"
