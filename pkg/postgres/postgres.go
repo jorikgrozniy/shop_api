@@ -39,9 +39,6 @@ func NewPostgres(lc fx.Lifecycle, cfg *config.DatabaseConfig) (*Postgres, error)
 		OnStop: func(ctx context.Context) error {
 			log.Println("Closing database connection")
 
-			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-			defer cancel()
-
 			db.close()
 
 			log.Println("Database connection closed")

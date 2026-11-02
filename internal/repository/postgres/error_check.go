@@ -15,3 +15,13 @@ func isFKViolation(err error) bool {
 
 	return false
 }
+
+func isCheckViolation(err error) bool {
+	var pgErr *pgconn.PgError
+
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23514"
+	}
+
+	return false
+}

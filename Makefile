@@ -1,5 +1,13 @@
 MIGRATIONS_DIR=./migrations
 APP_MAIN=./cmd/api/main.go
+GO_VERSION=$(shell go list -m -f '{{.GoVersion}}')
+LINT=GOTOOLCHAIN=go$(GO_VERSION) golangci-lint
+
+LOCAL_COMPOSE_FILE=docker-compose.local.yaml
+LOCAL_PROJECT=shop_api_local
+LOCAL_COMPOSE=docker compose -f $(LOCAL_COMPOSE_FILE)
+LOCAL_NETWORK=$(LOCAL_PROJECT)_default
+MIGRATE_NETWORK=$(notdir $(CURDIR))_default
 
 ifneq (,$(wildcard .env))
 	include .env
@@ -8,7 +16,9 @@ endif
 
 .PHONY: help up down build restart logs ps migrate-up migrate-down api-restart \
 	swag clean nginx-restart db-create-readonly-user db-build nginx-balancing-test \
-	nginx-cache-test nginx-compression-test generate-local-cert
+	nginx-cache-test nginx-compression-test generate-local-cert test lint lint-fix fmt \
+	local-up local-down local-build local-restart local-logs local-ps local-clean \
+	local-migrate-up local-migrate-down local-config
 
 help:
 	@echo "How to build:"
@@ -29,9 +39,24 @@ help:
 	@echo "  make nginx-cache-test           - nginx cache test"
 	@echo "  make nginx-compression-test     - nginx compression test"
 	@echo "  make migrate-down               - rollback last migration"
+	@echo "  make test                       - run integration tests (requires docker)"
+	@echo "  make lint                       - run golangci-lint"
+	@echo "  make lint-fix                   - apply automatic lint fixes"
+	@echo "  make fmt                        - format code (gofmt + goimports)"
 	@echo "  make logs                       - show logs"
 	@echo "  make ps                         - show containers"
 	@echo "  make clean                      - remove containers and volumes"
+	@echo "  ----------------------------"
+	@echo "Local HTTP stack (http://localhost:8080):"
+	@echo "  make local-build                - build and start local stack"
+	@echo "  make local-up                   - start local stack"
+	@echo "  make local-down                 - stop local stack"
+	@echo "  make local-restart              - rebuild and restart local stack"
+	@echo "  make local-migrate-up           - apply migrations to local database"
+	@echo "  make local-migrate-down         - rollback last local migration"
+	@echo "  make local-logs                 - show local logs"
+	@echo "  make local-ps                   - show local containers"
+	@echo "  make local-clean                - remove local containers and volumes"
 	@echo "  ----------------------------"
 
 up:
@@ -86,7 +111,7 @@ db-create-readonly-user:
 
 migrate-up:
 	docker run --rm \
-		--network $$(basename "$$(pwd)")_default \
+		--network $(MIGRATE_NETWORK) \
 		-v "$$(pwd)/$(MIGRATIONS_DIR):/migrations" \
 		migrate/migrate \
 		-path=/migrations \
@@ -95,7 +120,7 @@ migrate-up:
 
 migrate-down:
 	docker run --rm \
-		--network $$(basename "$$(pwd)")_default \
+		--network $(MIGRATE_NETWORK) \
 		-v "$$(pwd)/$(MIGRATIONS_DIR):/migrations" \
 		migrate/migrate \
 		-path=/migrations \
@@ -104,6 +129,49 @@ migrate-down:
 
 swag:
 	swag init -g $(APP_MAIN)
+
+test:
+	go test -count=1 -timeout 15m -tags integration ./internal/integration/...
+
+lint:
+	$(LINT) run ./...
+
+lint-fix:
+	$(LINT) run --fix ./...
+
+fmt:
+	$(LINT) fmt
+
+local-config:
+	$(LOCAL_COMPOSE) config --quiet
+
+local-up:
+	$(LOCAL_COMPOSE) up -d
+
+local-build:
+	$(LOCAL_COMPOSE) up -d --build
+
+local-down:
+	$(LOCAL_COMPOSE) down
+
+local-restart:
+	$(LOCAL_COMPOSE) down
+	$(LOCAL_COMPOSE) up -d --build
+
+local-logs:
+	$(LOCAL_COMPOSE) logs -f
+
+local-ps:
+	$(LOCAL_COMPOSE) ps
+
+local-clean:
+	$(LOCAL_COMPOSE) down -v --remove-orphans
+
+local-migrate-up:
+	$(MAKE) migrate-up MIGRATE_NETWORK=$(LOCAL_NETWORK)
+
+local-migrate-down:
+	$(MAKE) migrate-down MIGRATE_NETWORK=$(LOCAL_NETWORK)
 
 clean:
 	docker compose down -v --remove-orphans

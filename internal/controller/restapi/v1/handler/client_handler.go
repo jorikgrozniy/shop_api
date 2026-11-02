@@ -55,9 +55,7 @@ func (h *ClientHandler) AddClient(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.clientService.AddClient(ctx, client, address); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -90,9 +88,7 @@ func (h *ClientHandler) DeleteClient(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.clientService.RemoveClient(ctx, id); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -126,9 +122,7 @@ func (h *ClientHandler) GetClientsWithParams(c *gin.Context) {
 	ctx := c.Request.Context()
 	clients, limit, offset, err := h.clientService.GetClientsWithParams(ctx, &req.Name, &req.Surname, req.Limit, req.Offset)
 	if err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -139,9 +133,7 @@ func (h *ClientHandler) GetClientsWithParams(c *gin.Context) {
 	for i, client := range clients {
 		address, err := h.addressService.GetAddress(ctx, client.AddressID)
 		if err != nil {
-			c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-				Error: err.Error(),
-			})
+			respondServiceError(c, err)
 			return
 		}
 
@@ -188,9 +180,7 @@ func (h *ClientHandler) ChangeClientAddress(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.clientService.ChangeClientAddress(ctx, clientID, address); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 

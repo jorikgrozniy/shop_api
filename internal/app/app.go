@@ -22,6 +22,8 @@ func New() *fx.App {
 
 			pg.NewPostgres,
 
+			service.NewTxManager,
+
 			postgres.NewAddressRepoPostgres,
 			postgres.NewClientRepoPostgres,
 			postgres.NewImageRepoPostgres,

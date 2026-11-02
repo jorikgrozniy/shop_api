@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"shop_api/pkg/postgres"
@@ -19,9 +21,9 @@ func NewAddressRepoPostgres(pg *postgres.Postgres) repository.AddressRepository 
 	}
 }
 
-func (r *addressRepoPostgres) Save(ctx context.Context, address *entity.Address) (uuid.UUID, error) {
+func (r *addressRepoPostgres) Save(ctx context.Context, q postgres.Querier, address *entity.Address) (uuid.UUID, error) {
 	if address == nil {
-		return uuid.Nil, repository.ErrNilEntity
+		return uuid.Nil, fmt.Errorf("save address: %w", repository.ErrNilEntity)
 	}
 
 	query := `
@@ -30,23 +32,29 @@ func (r *addressRepoPostgres) Save(ctx context.Context, address *entity.Address)
 		) VALUES (
 			$1, $2, $3
 		)
+		ON CONFLICT (country, city, street)
+		DO UPDATE SET country = addresses.country
 		RETURNING id
 	`
 
 	var id uuid.UUID
-	err := r.pg.Pool.QueryRow(ctx, query,
+	err := q.QueryRow(ctx, query,
 		address.Country, address.City, address.Street).Scan(&id)
 
-	if err == postgres.ErrNoRows {
-		return uuid.Nil, repository.ErrNoRows
+	if errors.Is(err, postgres.ErrNoRows) {
+		return uuid.Nil, fmt.Errorf("save address: %w", repository.ErrNoRows)
 	} else if err != nil {
-		return uuid.Nil, repository.ErrQueryExec
+		return uuid.Nil, fmt.Errorf("save address: %w: %w", repository.ErrQueryExec, err)
 	}
 
 	return id, nil
 }
 
-func (r *addressRepoPostgres) Find(ctx context.Context, address *entity.Address) (uuid.UUID, error) {
+func (r *addressRepoPostgres) Find(ctx context.Context, q postgres.Querier, address *entity.Address) (uuid.UUID, error) {
+	if address == nil {
+		return uuid.Nil, fmt.Errorf("find address: %w", repository.ErrNilEntity)
+	}
+
 	query := `
 		SELECT id
 		FROM addresses
@@ -54,13 +62,13 @@ func (r *addressRepoPostgres) Find(ctx context.Context, address *entity.Address)
 	`
 
 	var id uuid.UUID
-	err := r.pg.Pool.QueryRow(ctx, query,
+	err := q.QueryRow(ctx, query,
 		address.Country, address.City, address.Street).Scan(&id)
 
-	if err == postgres.ErrNoRows {
-		return uuid.Nil, repository.ErrNoRows
+	if errors.Is(err, postgres.ErrNoRows) {
+		return uuid.Nil, fmt.Errorf("find address: %w", repository.ErrNoRows)
 	} else if err != nil {
-		return uuid.Nil, repository.ErrQueryExec
+		return uuid.Nil, fmt.Errorf("find address: %w: %w", repository.ErrQueryExec, err)
 	}
 
 	return id, nil
@@ -79,10 +87,10 @@ func (r *addressRepoPostgres) GetByID(ctx context.Context, id uuid.UUID) (*entit
 		&address.ID, &address.Country, &address.City, &address.Street,
 	)
 
-	if err == postgres.ErrNoRows {
-		return nil, repository.ErrNoRows
+	if errors.Is(err, postgres.ErrNoRows) {
+		return nil, fmt.Errorf("get address %s: %w", id, repository.ErrNoRows)
 	} else if err != nil {
-		return nil, repository.ErrQueryExec
+		return nil, fmt.Errorf("get address %s: %w: %w", id, repository.ErrQueryExec, err)
 	}
 
 	return &address, nil

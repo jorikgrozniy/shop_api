@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 	"shop_api/internal/entity"
 	"shop_api/internal/repository"
 	"shop_api/pkg/postgres"
@@ -19,9 +20,9 @@ func NewClientRepoPostgres(pg *postgres.Postgres) repository.ClientRepository {
 	}
 }
 
-func (r *clientRepoPostgres) Save(ctx context.Context, client *entity.Client) error {
+func (r *clientRepoPostgres) Save(ctx context.Context, q postgres.Querier, client *entity.Client) error {
 	if client == nil {
-		return repository.ErrNilEntity
+		return fmt.Errorf("save client: %w", repository.ErrNilEntity)
 	}
 
 	query := `
@@ -32,13 +33,13 @@ func (r *clientRepoPostgres) Save(ctx context.Context, client *entity.Client) er
 		)
 	`
 
-	_, err := r.pg.Pool.Exec(ctx, query,
+	_, err := q.Exec(ctx, query,
 		client.Name, client.Surname,
 		client.Birthdate, client.Gender, client.AddressID,
 	)
 
 	if err != nil {
-		return repository.ErrQueryExec
+		return fmt.Errorf("save client: %w: %w", repository.ErrQueryExec, err)
 	}
 
 	return nil
@@ -53,13 +54,13 @@ func (r *clientRepoPostgres) RemoveByID(ctx context.Context, id uuid.UUID) error
 	cmdTag, err := r.pg.Pool.Exec(ctx, query, id)
 
 	if isFKViolation(err) {
-		return repository.ErrDependentEntity
+		return fmt.Errorf("remove client %s: %w: %w", id, repository.ErrDependentEntity, err)
 	} else if err != nil {
-		return repository.ErrQueryExec
+		return fmt.Errorf("remove client %s: %w: %w", id, repository.ErrQueryExec, err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return repository.ErrNoRows
+		return fmt.Errorf("remove client %s: %w", id, repository.ErrNoRows)
 	}
 
 	return nil
@@ -81,7 +82,7 @@ func (r *clientRepoPostgres) GetWithParams(
 
 	rows, err := r.pg.Pool.Query(ctx, query, name, surname, limit, offset)
 	if err != nil {
-		return nil, repository.ErrQueryExec
+		return nil, fmt.Errorf("list clients: %w: %w", repository.ErrQueryExec, err)
 	}
 	defer rows.Close()
 
@@ -93,29 +94,33 @@ func (r *clientRepoPostgres) GetWithParams(
 			&client.Gender, &client.RegistrationDate, &client.AddressID,
 		)
 		if err != nil {
-			return nil, repository.ErrRowScan
+			return nil, fmt.Errorf("list clients: %w: %w", repository.ErrRowScan, err)
 		}
 		clients = append(clients, &client)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list clients: %w: %w", repository.ErrQueryExec, err)
 	}
 
 	return clients, nil
 }
 
-func (r *clientRepoPostgres) UpdateAddress(ctx context.Context, clientID, addressID uuid.UUID) error {
+func (r *clientRepoPostgres) UpdateAddress(ctx context.Context, q postgres.Querier, clientID, addressID uuid.UUID) error {
 	query := `
 		UPDATE clients
 		SET address_id = $2
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.pg.Pool.Exec(ctx, query, clientID, addressID)
+	cmdTag, err := q.Exec(ctx, query, clientID, addressID)
 
 	if err != nil {
-		return repository.ErrQueryExec
+		return fmt.Errorf("update address of client %s: %w: %w", clientID, repository.ErrQueryExec, err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return repository.ErrNoRows
+		return fmt.Errorf("update address of client %s: %w", clientID, repository.ErrNoRows)
 	}
 
 	return nil

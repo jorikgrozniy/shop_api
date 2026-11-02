@@ -35,6 +35,7 @@ func NewProductHandler(productService *service.ProductService,
 // @Param request body dto.ProductRequest true "Product data"
 // @Success 201 {object} dto.SuccessResponse
 // @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /products [post]
 func (h *ProductHandler) AddProduct(c *gin.Context) {
@@ -68,9 +69,7 @@ func (h *ProductHandler) AddProduct(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.productService.AddProduct(ctx, product, image); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -113,9 +112,7 @@ func (h *ProductHandler) DecreaseProductStock(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.productService.DecreaseAvailableStock(ctx, id, req.Amount); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -149,9 +146,7 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 	ctx := c.Request.Context()
 	product, err := h.productService.GetProduct(ctx, id)
 	if err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -183,9 +178,7 @@ func (h *ProductHandler) GetProductsWithParams(c *gin.Context) {
 	ctx := c.Request.Context()
 	products, limit, offset, err := h.productService.GetProductsWithParams(ctx, req.Limit, req.Offset)
 	if err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -220,9 +213,7 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.productService.RemoveProduct(ctx, id); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -273,9 +264,7 @@ func (h *ProductHandler) AddProductImage(c *gin.Context) {
 	image := mapper.ImageDTOtoDAO(req)
 	ctx := c.Request.Context()
 	if err := h.productService.AddProductImage(ctx, id, image); err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
@@ -309,9 +298,7 @@ func (h *ProductHandler) GetProductImage(c *gin.Context) {
 	ctx := c.Request.Context()
 	image, err := h.productService.GetProductImage(ctx, id)
 	if err != nil {
-		c.JSON(getServiceErrorCode(err), dto.ErrorResponse{
-			Error: err.Error(),
-		})
+		respondServiceError(c, err)
 		return
 	}
 
